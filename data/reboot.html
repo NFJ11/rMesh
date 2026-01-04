@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="de">
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" /> 
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<link rel="stylesheet" type="text/css" href="style.css"  />
+	</head>
+	
+	<body>
+	
+		<div style="display:inline-block;">
+			<h1> Verbindungsversuch in <span id="timeout"></span> Sekunden.</h1>
+		</div>
+		
+		<script>
+			var timeout = 15;
+			document.addEventListener('DOMContentLoaded', function() {
+				
+			var http = new XMLHttpRequest();
+			http.open('POST', "reboot.html", true);
+			http.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+			http.send("REBOOT=true");
+
+			countdown();
+			});		
+		
+			function countdown() {
+				document.getElementById("timeout").innerHTML = timeout;
+				timeout = timeout - 1;
+				if (timeout > 0) {
+					setTimeout(countdown, 1000);
+				} else {
+					window.location.href = "%URL%";
+				}
+			}
+		</script>
+	</body>
+</html>

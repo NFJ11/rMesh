@@ -1,0 +1,118 @@
+p, h1, h2, h3, h4, h5, h6, a, div, body, table, input {
+	font-family: Arial;
+	font-weight: normal;
+	font-size: 13px;
+	color: #000000;
+}
+
+body {
+	text-align: center;
+	background-color: #AAAAAA;
+}
+
+input, textarea, checkbox {
+  background-color : #CCCCCC; 
+}
+
+h1 {
+	font-weight: bold;
+	font-size: 18px;
+}
+
+h7 {
+	font-size: 12px;
+}
+
+table {
+	empty-cells: hide;
+	border-collapse:collapse;
+	}
+
+td {
+	text-align:left;
+	vertical-align:left;
+	border-style:none;
+	border-width:1px;
+	padding-left:3px;
+	padding-right:3px;
+	padding-top:3px;
+	padding-bottom:3px;
+}
+
+a, h2 a:hover, h3 a:hover {
+	color: #06c;
+	text-decoration: none;
+	}
+
+a:hover {
+	color: #147;
+	text-decoration: none;
+	}
+
+li {
+	list-style-type: none;
+	list-style-image: none;
+	margin: 0px;
+	}
+	
+.tc {
+	text-align:center;
+	border-style:none;
+	border-width:1px;
+	padding-left:3px;
+	padding-right:3px;
+	padding-top:3px;
+	padding-bottom:3px;
+}	
+
+
+.led-checkbox-green input {
+  position: absolute;
+  opacity: 0;
+  height: 0;
+  width: 0;
+  font-size: 50px;
+  
+}
+
+.led-checkbox-green .checkmark {
+  position: relative;
+  display: inline-block;
+  margin: 0 auto;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background-color: #006000;
+  box-shadow: rgba(0, 0, 0, 0.7) 0 0px 1px 0px;
+}
+	
+.led-checkbox-green .checkmark:after {
+  content: "";
+  position: relative;
+  display: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background-color: #90FF00;
+  box-shadow: rgba(0, 0, 0, 0.7) 0 0px 3px 0px;
+}
+
+.led-checkbox-green input:checked ~ .checkmark:after {
+  display: block;
+}
+
+.led-text {
+  margin-left: 20px;
+  position:absolute; 
+  top: -1px;
+}
+
+.checkbox-text{
+	position: relative;
+    vertical-align: middle;
+    left: 3px;
+	bottom: 2px;
+}
+
+
+

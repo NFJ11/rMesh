@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="de">
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" /> 
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<link rel="stylesheet" type="text/css" href="style.css"  />
+		 <title>%NAME% - Einstellungen</title>
+	</head>
+	
+	<body>
+	
+		<div style="display:inline-block;">
+			<h1> Konfiguration </h1>
+			<form method='post' autocomplete='off'>
+				<table>
+				
+					<tr> 
+						<td> Name </td> 
+						<td> 
+							<input style='width: 200px;' name='NAME' value='%NAME%'> 
+						</td> 
+					</tr>
+					
+					<tr>
+						<td> Accesspoint </td> 
+						<td> <input type='checkbox' %AP_MODE% name='AP_MODE'> </td>
+					</tr> 
+				
+					<tr class="AP_MODE_ENABLED"> 
+						<td> SSID </td> 
+						<td> 
+							<select name='WIFI_SSID_SELECT' size='1'>
+								<option>[manuell]</option>
+								%SSID_OPTIONS%
+							</select> 
+							<button name='SEARCH'>suchen</button> <br> 
+							<input name='WIFI_SSID' value="%WIFI_SSID%">
+						</td>
+					</tr>
+					
+					<tr class="AP_MODE_ENABLED"> 
+						<td> Passwort </td> 
+						<td> <input name='WIFI_PASSWORD' value="%WIFI_PASSWORD%" style='width: 200px;' > </td> 
+					</tr>
+					
+					<tr class="AP_MODE_ENABLED"> 
+						<td> DHCP </td> 
+						<td> <input type='checkbox' %DHCP% name='DHCP'> </td>
+					</tr> 
+
+					<tr class="DHCP_ENABLED AP_MODE_ENABLED"> 
+						<td> IP-Adresse </td> 
+						<td> 
+							<input style='width: 30px;' name='WIFI_IP_0' value='%WIFI_IP_0%'> 
+							<input style='width: 30px;' name='WIFI_IP_1' value='%WIFI_IP_1%'> 
+							<input style='width: 30px;' name='WIFI_IP_2' value='%WIFI_IP_2%'> 
+							<input style='width: 30px;' name='WIFI_IP_3' value='%WIFI_IP_3%'>  
+						</td> 
+					</tr>
+
+					<tr class="DHCP_ENABLED"> 
+						<td> Subnetz </td> 
+						<td> 
+							<input style='width: 30px;' name='WIFI_NETMASK_0' value='%WIFI_NETMASK_0%'> 
+							<input style='width: 30px;' name='WIFI_NETMASK_1' value='%WIFI_NETMASK_1%'> 
+							<input style='width: 30px;' name='WIFI_NETMASK_2' value='%WIFI_NETMASK_2%'> 
+							<input style='width: 30px;' name='WIFI_NETMASK_3' value='%WIFI_NETMASK_3%'>  
+						</td> 
+					</tr>
+
+					<tr class="DHCP_ENABLED">
+						<td> Gateway </td> 
+						<td> 
+							<input style='width: 30px;' name='WIFI_GATEWAY_0' value='%WIFI_GATEWAY_0%'> 
+							<input style='width: 30px;' name='WIFI_GATEWAY_1' value='%WIFI_GATEWAY_1%'> 
+							<input style='width: 30px;' name='WIFI_GATEWAY_2' value='%WIFI_GATEWAY_2%'> 
+							<input style='width: 30px;' name='WIFI_GATEWAY_3' value='%WIFI_GATEWAY_3%'>  
+						</td> 
+					</tr>
+
+					<tr class="DHCP_ENABLED"> 
+						<td> DNS </td> 
+						<td> 
+							<input style='width: 30px;' name='WIFI_DNS_0' value='%WIFI_DNS_0%'> 
+							<input style='width: 30px;' name='WIFI_DNS_1' value='%WIFI_DNS_1%'> 
+							<input style='width: 30px;' name='WIFI_DNS_2' value='%WIFI_DNS_2%'> 
+							<input style='width: 30px;' name='WIFI_DNS_3' value='%WIFI_DNS_3%'>  
+						</td> 
+					</tr>
+				
+				</table> <br>
+		
+				<button name='SAVE'> Speichern & Neustart </button>
+			
+			</form>
+		</div>
+		
+	</body>
+	
+	
+	<script type="text/javascript">
+	
+	
+		document.addEventListener("DOMContentLoaded", function () {
+			visibility()
+		});
+		
+		document.getElementsByName("DHCP")[0].addEventListener("change", function () {
+			visibility();
+		});
+		
+		document.getElementsByName("AP_MODE")[0].addEventListener("change", function () {
+			visibility();
+		});		
+		
+		document.getElementsByName("WIFI_SSID_SELECT")[0].addEventListener("change", function () {
+			visibility();
+		});		
+		
+
+	
+		function visibility() {
+			if (document.getElementsByName("AP_MODE")[0].checked) {
+				for (e of document.getElementsByClassName('DHCP_ENABLED')) {
+					e.style.display = "none";
+				}
+				for (e of document.getElementsByClassName('AP_MODE_ENABLED')) {
+					e.style.display = "none";
+				}				
+			} else {
+				for (e of document.getElementsByClassName('AP_MODE_ENABLED')) {
+					e.style.display = "";
+				}				
+				if (document.getElementsByName("DHCP")[0].checked) {
+					for (e of document.getElementsByClassName('DHCP_ENABLED')) {
+						e.style.display = "none";
+					}
+				} else {
+					for (e of document.getElementsByClassName('DHCP_ENABLED')) {
+						e.style.display = "";
+					}
+				}
+			}
+			
+			
+			if (document.getElementsByName("WIFI_SSID_SELECT")[0].value == "[manuell]") {
+				document.getElementsByName('WIFI_SSID')[0].style.display = "";
+			} else {
+				document.getElementsByName('WIFI_SSID')[0].style.display = "none";
+				document.getElementsByName('WIFI_SSID')[0].value = document.getElementsByName("WIFI_SSID_SELECT")[0].value;
+			}
+			
+			
+			
+		}
+	
+	
+	</script>
+</html>

@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="de">
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" /> 
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<link rel="stylesheet" type="text/css" href="style.css"  />
+		 <title>%NAME%</title>
+	</head>
+	
+	<body>
+		<div style="position:relative; border:1px solid; display:inline-block; background-color: #AAAAAA; width:500px; height:230px;">
+			
+			<h1 style="position:relative; top:-10px; "> %NAME% </h1>
+			
+			<a href="settings.html"> <img style="position:absolute; top:3px; right:5px; width:20px;" src="settings.png"> </a>
+			<img style="position:absolute; top:3px; right:30px; width:20px;" id="wifiimage">
+
+			<canvas style="position:absolute; top:30px; left:0px;" id="fwdPwr" width="450" height="25" data-val="0">No canvas</canvas>
+			<span style="position:absolute; top:30px; left:455px;" id="labelfwdPwr">---</span>
+
+			<canvas style="position:absolute; top:60px; left:0px;" id="refPwr" width="450" height="25" data-val="0">No canvas</canvas>
+			<span style="position:absolute; top:60px; left:455px;" id="labelrefPwr">---</span>
+
+			<canvas style="position:absolute; top:90px; left:0px;" id="iD" width="450" height="25" data-val="0">No canvas</canvas>
+			<span style="position:absolute; top:90px; left:455px;" id="labeliD">---</span>
+
+			<canvas style="position:absolute; top:120px; left:0px;" id="uB" width="450" height="25" data-val="0">No canvas</canvas>
+			<span style="position:absolute; top:120px; left:455px;" id="labeluB">---</span>
+
+			<canvas style="position:absolute; top:150px; left:0px;" id="temp" width="450" height="25" data-val="0">No canvas</canvas>
+			<span style="position:absolute; top:150px; left:455px;" id="labeltemp">---</span>
+
+			
+			<label style="position:absolute; top:185px; left:10px;" class="led-checkbox-green"> <input type="checkbox" id="ein"> <span class="checkmark"></span><span class="checkbox-text">Ein</span></label>
+
+			<label style="position:absolute; top:205px; left:10px;" class="led-checkbox-green"> <input type="checkbox" id="qro"> <span class="checkmark"></span><span class="checkbox-text">QRO</span></label>
+
+			<label style="position:absolute; top:185px; left:70px;" class="led-checkbox-green"> <input type="checkbox" id="ptt"> <span class="checkmark"></span><span class="checkbox-text">PTT</span></label>
+
+			<label style="position:absolute; top:205px; left:70px;" class="led-checkbox-green"> <input type="checkbox" id="vv"> <span class="checkmark"></span><span class="checkbox-text">VV</span></label>
+			
+			<div style="position:absolute; top:185px; left:125px; width:365px; height:35px; display:inline-flex; align-items:center; justify-content:center; background-color: #888888;" id="fehlerfenster" >
+				<span id="fehler"></span>
+			</div>
+	
+		<script src="meter.js"></script>
+        <script>
+
+			var gateway = `ws://${window.location.hostname}/socket`;
+			//var gateway = "ws://10.10.254.199:81";
+			var websocket;
+  			var wifiRed = new Image();
+  			var wifiGreen = new Image();
+		
+			var timeout = 0;
+			
+			var fwdPwr = document.getElementById('fwdPwr');
+			meter(fwdPwr, {
+			  "textVal": "PWR fwd",
+			  "maxVal": 1500,
+			  "redVal": 1200,
+			  "yellowVal": 750,
+			  "unit": "W",
+			  "decimals": 1
+			});
+			
+			var refPwr = document.getElementById('refPwr');
+			meter(refPwr, {
+			  "textVal": "PWR ref",
+			  "maxVal": 150,
+			  "redVal": 120,
+			  "yellowVal": 75,
+			  "unit": "W",
+			  "decimals": 1
+			});
+
+			var iD = document.getElementById('iD');
+			meter(iD, {
+			  "textVal": "Id",
+			  "maxVal": 120,
+			  "redVal": 80,
+			  "yellowVal": 60,
+			  "unit": "A",
+			  "decimals": 10
+			});
+
+			var uB = document.getElementById('uB');
+			meter(uB, {
+			  "textVal": "uB",
+			  "maxVal": 40,
+			  "redVal": 999,
+			  "yellowVal": 999,
+			  "unit": "V",
+			  "decimals": 10
+			});
+
+			var temp = document.getElementById('temp');
+			meter(temp, {
+			  "textVal": "Temp",
+			  "maxVal": 70,
+			  "redVal": 60,
+			  "yellowVal": 45,
+			  "unit": "°C",
+			  "decimals": 10
+			});
+
+			document.addEventListener('DOMContentLoaded', function() {
+				//Verbinden
+				document.getElementById("ein").checked = false;
+				document.getElementById("qro").checked = false;
+				document.getElementById("vv").checked  = false;
+				document.getElementById("ptt").checked = false;
+		        wifiRed.src = "wifi_red.png";
+		        wifiGreen.src = "wifi_green.png";
+				
+				initWebSocket();
+			});
+
+			//Checkbox Click Disable
+			document.getElementById("ptt").onchange = function(evt) { this.checked = !this.checked;	};
+
+			document.getElementById("ein").onchange = function(evt) { 
+				//Befehl senden
+				txData = new Uint8Array(1);
+				if (this.checked) {txData[0] = 1;} else {txData[0] = 2;}
+				websocket.send(txData.buffer);
+
+				//Direkte Änderung rückgänig
+				this.checked = !this.checked;
+			};
+
+			document.getElementById("qro").onchange = function(evt) { 
+				//Befehl senden
+				txData = new Uint8Array(1);
+				if (this.checked) {txData[0] = 3;} else {txData[0] = 4;}
+				websocket.send(txData.buffer);
+
+				//Direkte Änderung rückgänig
+				this.checked = !this.checked;
+			};
+
+			document.getElementById("vv").onchange = function(evt) { 
+				//Befehl senden
+				txData = new Uint8Array(1);
+				if (this.checked) {txData[0] = 5;} else {txData[0] = 6;}
+				websocket.send(txData.buffer);
+
+				//Direkte Änderung rückgänig
+				this.checked = !this.checked;
+			};
+
+			function keepAlive() { 
+				if (websocket.readyState == websocket.OPEN) {  
+					txData = new Uint8Array(1);
+					txData[0] = 0;
+					websocket.send(txData.buffer);
+				}  
+				timeout = setTimeout(keepAlive, 1000);  
+			}
+
+			function initWebSocket() {
+				fehler("Verbindung wird hergestellt...");
+				document.getElementById("wifiimage").src = wifiRed.src;
+				websocket = new WebSocket(gateway);
+				websocket.binaryType = 'arraybuffer';
+				websocket.onopen = onOpen;
+				websocket.onclose = onClose;
+				websocket.onmessage = onMessage;
+			}
+
+			function onOpen(event) {
+				fehler("");
+				document.getElementById("wifiimage").src = wifiGreen.src;
+				fwdPwr.setAttribute('data-val', 0);
+				refPwr.setAttribute('data-val', 0);
+				iD.setAttribute('data-val', 0);
+				uB.setAttribute('data-val', 0);
+				temp.setAttribute('data-val', 0);
+				keepAlive();
+			}
+
+			function onClose(event) {
+				fehler("Verbindung getrennt!");
+				document.getElementById("wifiimage").src = wifiRed.src;
+				clearTimeout(timeout);
+				setTimeout(initWebSocket, 500);
+			}
+
+			// Function that receives the message from the ESP32 with the readings
+			function onMessage(event) {
+				var buffer = new Uint8Array(event.data);
+				//var fwdPwr = new DataView(new Uint8Array([buffer[5], buffer[4], buffer[3], buffer[2]]).buffer).getFloat32(0);
+				//var u2 = new DataView(new Uint8Array([buffer[7], buffer[6], buffer[5], buffer[4]]).buffer).getFloat32(0);
+				//var u3 = new DataView(new Uint8Array([buffer[11], buffer[10], buffer[9], buffer[8]]).buffer).getFloat32(0);
+				
+				//Status-Byte auswerten
+				document.getElementById("ein").checked = buffer[0] & 0b00000001;
+				document.getElementById("qro").checked = buffer[0] & 0b00000010;
+				document.getElementById("vv").checked  = buffer[0] & 0b00000100;
+				document.getElementById("ptt").checked = buffer[0] & 0b00001000;
+				
+				//Fehlermeldungen
+				switch(buffer[1]) {
+				  case 0: fehler(""); break;
+				  case 1: fehler("Betriebsspannung zu gering"); break;
+				  case 2: fehler("Betriebsspannung zu hoch"); break;
+				  case 3: fehler("Übertemperatur"); break;
+				  case 4: fehler("SWR zu hoch"); break;
+				  case 5: fehler("Strom zu hoch"); break;
+				  case 6: fehler("Ausgangsleistung zu hoch"); break;
+
+				  default: fehler("unbekannter Fehler. Code: " + buffer[1]); break;
+				} 
+				
+				fwdPwr.setAttribute('data-val', new DataView(new Uint8Array([buffer[5], buffer[4], buffer[3], buffer[2]]).buffer).getFloat32(0));
+				refPwr.setAttribute('data-val', new DataView(new Uint8Array([buffer[9], buffer[8], buffer[7], buffer[6]]).buffer).getFloat32(0));
+				iD.setAttribute('data-val', new DataView(new Uint8Array([buffer[13], buffer[12], buffer[11], buffer[10]]).buffer).getFloat32(0));
+				uB.setAttribute('data-val', new DataView(new Uint8Array([buffer[17], buffer[16], buffer[15], buffer[14]]).buffer).getFloat32(0));
+				temp.setAttribute('data-val', new DataView(new Uint8Array([buffer[21], buffer[20], buffer[19], buffer[18]]).buffer).getFloat32(0));
+			}		
+		
+			function fehler(msg) {
+				//Fehlermeldung anzeigen
+				if (msg == "") {
+					msg = "keine Fehler."
+					document.getElementById("fehlerfenster").style.background = "#888888";  
+					document.getElementById("fehler").style.fontWeight = "normal";
+				} else {
+					document.getElementById("fehlerfenster").style.background = "#FF2F1E";
+					document.getElementById("fehler").style.fontWeight = "bold";
+				}
+				document.getElementById("fehler").innerHTML	= msg;
+			}
+		
+		
+		</script>
+    </body>
+</html>

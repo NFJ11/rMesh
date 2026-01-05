@@ -2,6 +2,7 @@
 #include <WiFi.h>
 #include "wifiFunctions.h"
 #include "settings.h"
+#include "main.h"
 
 unsigned long long ledTimer = 0;
 byte wifiStatus = 0xff;

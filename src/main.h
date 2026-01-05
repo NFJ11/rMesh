@@ -6,8 +6,9 @@
 #define LORA_DIO0   26
 #define LORA_RST    23
 #define LORA_DIO1   33
-#define RADIO_BOARD_AUTO
 
+#define PIN_WIFI_LED 25      //LED WiFi-Status (ein = AP-Mode, blinken = Client-Mode, aus = nicht verbunden)
+#define AP_MODE_TASTER 0     //Taster Umschaltung WiFi CLient/AP
 
 
 #endif

@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <EEPROM.h>
+#include <nvs_flash.h>
 #include "settings.h"
 
 Settings settings;
@@ -16,12 +17,13 @@ void defaultSettings() {
     settings.wifiNetMask = IPAddress(255,255,255,0);
     settings.wifiGateway = IPAddress(192,168,33,4);
     settings.wifiDNS = IPAddress(192,168,33,4);
-    
 }
 
 void saveSettings() {
     //Einstellungen im EEPROM speichern
     Serial.println("Speichere Einstellungen");
+    nvs_flash_erase(); // Löscht die gesamte NVS-Partition
+    nvs_flash_init();  // Initialisiert sie neu    
     EEPROM.begin(4096);
     EEPROM.put(0, settings);
     EEPROM.commit();

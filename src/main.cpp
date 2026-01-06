@@ -16,8 +16,7 @@
 
 //Routing
 std::vector<Peer> peerList;
-uint32_t announceTimer = 0;
-
+uint32_t announceTimer = 5000; //Erstes Announce nach 5 Sekunden
 
 //Uhrzeit 
 const char* TZ_INFO = "CET-1CEST,M3.5.0,M10.5.0/3";
@@ -137,6 +136,7 @@ void loop() {
         doc["monitor"]["rssi"] = radio.getRSSI();
         doc["monitor"]["snr"] = radio.getSNR();
         doc["monitor"]["frequencyError"] = radio.getFrequencyError();
+        doc["monitor"]["time"] = time(NULL);
         String jsonOutput;
         serializeJson(doc, jsonOutput);
         ws.textAll(jsonOutput);

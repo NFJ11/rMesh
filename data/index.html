@@ -172,6 +172,8 @@
 
 					//Decodiert
 					msg = "";
+					const rxTime = new Date(d.monitor.time * 1000);
+					msg += rxTime.toLocaleTimeString('de-DE') + " ";
 					if (d.monitor.tx == true) {msg += "TX: ";} else {msg += "RX: ";}
 					//Rufzeichen ausschneiden
 					var frame = d.monitor.data;

@@ -67,6 +67,7 @@ bool transmit(uint8_t* data, size_t len) {
         doc["monitor"]["rssi"] = 0;
         doc["monitor"]["snr"] = 0;
         doc["monitor"]["frequencyError"] = 0;
+        doc["monitor"]["time"] = time(NULL);
         String jsonOutput;
         serializeJson(doc, jsonOutput);
         ws.textAll(jsonOutput);

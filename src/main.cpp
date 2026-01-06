@@ -97,15 +97,42 @@ void loop() {
   //Prüfen, ob was gesendet werden muss
   if (transmittingFlag == false) {
     for (int i = 0; i < txFrameBuffer.size(); i++) {
+      //Prüfen, ob Frame gesendet werden muss
       if (millis() > txFrameBuffer[i].transmitMillis) {
-        //Frame senden
-        if (transmitFrame(txFrameBuffer[i])) {
-          //Senden OK
-          //Aus Liste löschen
-          txFrameBuffer.erase(txFrameBuffer.begin() + i);
-        }else {
-          //Nochmal versuchen
-          txFrameBuffer[i].transmitMillis = millis() + TX_BUSY_RETRY;
+        //ANNOUNCE UND ANNOUNCE_REPLY FRAMES
+        if ((txFrameBuffer[i].frameType == FrameType::ANNOUNCE) || (txFrameBuffer[i].frameType == FrameType::ANNOUNCE_REPLY) || (txFrameBuffer[i].frameType == FrameType::TUNE)) {
+          //Frame senden
+          if (transmitFrame(txFrameBuffer[i])) {
+            //Aus Liste löschen
+            txFrameBuffer.erase(txFrameBuffer.begin() + i);
+          }else {
+            //Nochmal versuchen
+            txFrameBuffer[i].transmitMillis = millis() + TX_BUSY_RETRY_TIME;
+          }
+        }
+      //MESSAGE-FRAMES 
+        if (txFrameBuffer[i].frameType == TEXT_MESSAGE) {
+          //Frame senden
+          if (transmitFrame(txFrameBuffer[i])) {
+            //Frame löschen, wenn keine VIA-R mehr dabei sind
+            bool repeat = false;
+            for (int ii = 0; ii < txFrameBuffer[i].viaCall.size(); ii++) {
+              if (txFrameBuffer[i].viaCall[ii].header == VIA_REPEAT) {repeat = true;}
+            }
+            if (repeat == false) {txFrameBuffer[i].retry = 0xFF;}
+            //Prüfen, ob Retrys ausgeschöpft sind
+            if (txFrameBuffer[i].retry < TX_RETRY) {
+              //Nochmal Senden
+              txFrameBuffer[i].retry ++;
+              txFrameBuffer[i].transmitMillis = millis() + TX_RETRY_TIME;
+            } else {
+              //Genug Retrys
+              txFrameBuffer.erase(txFrameBuffer.begin() + i);
+            }
+          } else {
+            //Nochmal versuchen
+            txFrameBuffer[i].transmitMillis = millis() + TX_BUSY_RETRY_TIME;
+          }
         }
       }
     }
@@ -138,7 +165,6 @@ void loop() {
         //Decodieren
         Frame rxFrame;
         rxFrame.viaCall.reserve(6);
-        rxFrame.viaHeader.reserve(6);
         //Frametype
         rxFrame.frameType = rxBytes[0];
         //Frame druchlaufen und nach Headern suchen
@@ -146,11 +172,11 @@ void loop() {
           //Header prüfen
           switch (rxBytes[i] & 0xF0) {
             case HeaderType::SRC_CALL:
-              for(int ii = i + 1; ii < i + 1 + (rxBytes[i] & 0x0F); ii++) { rxFrame.srcCall += (char)rxBytes[ii]; }
+              for(int ii = i + 1; ii < i + 1 + (rxBytes[i] & 0x0F); ii++) { rxFrame.srcCall.call += (char)rxBytes[ii]; }
               i += (rxBytes[i] & 0x0F);
               break;
             case HeaderType::DST_CALL:
-              for(int ii = i + 1; ii < i + 1 + (rxBytes[i] & 0x0F); ii++) { rxFrame.dstCall += (char)rxBytes[ii]; }
+              for(int ii = i + 1; ii < i + 1 + (rxBytes[i] & 0x0F); ii++) { rxFrame.dstCall.call += (char)rxBytes[ii]; }
               i += (rxBytes[i] & 0x0F);
               break;
           }
@@ -158,12 +184,12 @@ void loop() {
 
         //In Peer-Liste einfügen
         Peer p;
-        p.call = rxFrame.srcCall;
+        p.call = rxFrame.srcCall.call;
         p.lastRX = time(NULL);
         p.frqError = radio.getFrequencyError();
         p.rssi = radio.getRSSI();
         p.snr = radio.getSNR();
-        if ((rxFrame.dstCall == String(settings.mycall)) && (rxFrame.frameType == FrameType::ANNOUNCE_REPLY))  {
+        if ((rxFrame.dstCall.call == String(settings.mycall)) && (rxFrame.frameType == FrameType::ANNOUNCE_REPLY))  {
           p.available = true;
         } else {
           p.available = false;
@@ -177,7 +203,7 @@ void loop() {
             //Antowrt zusammenbauen
             txFrame.frameType = FrameType::ANNOUNCE_REPLY;
             txFrame.transmitMillis = millis() + ANNOUNCE_REPLAY_TIME;
-            txFrame.dstCall = rxFrame.srcCall;
+            txFrame.dstCall.call = rxFrame.srcCall.call;
             txFrameBuffer.push_back(txFrame);
             break;          
           case FrameType::ANNOUNCE_REPLY:  //Announce REPLAY

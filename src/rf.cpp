@@ -57,6 +57,13 @@ void initRadio() {
     Serial.printf("[SX1278] Starting to listen ... ");
     printState(radio.startReceive());
 
+    //Test PEER eintragen
+    Peer p;
+    p.lastRX = 0xFFFFFFFF;
+    p.call = "NONE";
+    p.available = true;
+    peerList.push_back(p);
+
 }
 
 bool transmitRAW(uint8_t* data, size_t len) {
@@ -98,12 +105,31 @@ bool transmitFrame(Frame &f) {
     txBufferLength ++;
     memcpy(&txBuffer[txBufferLength], &settings.mycall[0], strlen(settings.mycall)); //Payload
     txBufferLength += strlen(settings.mycall);
-    //Empfänger hinzu
-    if (f.dstCall.length() > 0) {
-        txBuffer[txBufferLength] = HeaderType::DST_CALL | (0x0F & f.dstCall.length());  //Header Absender
+    //VIAs hinzu
+    for (int i = 0; i < f.viaCall.size(); i++) {
+        txBuffer[txBufferLength] = f.viaCall[i].header | (0x0F & f.viaCall[i].call.length() );  //Header Absender
         txBufferLength ++;
-        memcpy(&txBuffer[txBufferLength], &f.dstCall[0], f.dstCall.length()); //Payload
-        txBufferLength += f.dstCall.length();
+        memcpy(&txBuffer[txBufferLength], &f.viaCall[i].call[0], f.viaCall[i].call.length()); //Payload
+        txBufferLength += f.viaCall[i].call.length();
+    }
+    //Empfänger hinzu
+    if (f.dstCall.call.length() > 0) {
+        txBuffer[txBufferLength] = HeaderType::DST_CALL | (0x0F & f.dstCall.call.length());  //Header Absender
+        txBufferLength ++;
+        memcpy(&txBuffer[txBufferLength], &f.dstCall.call[0], f.dstCall.call.length()); //Payload
+        txBufferLength += f.dstCall.call.length();
+    }
+    //Message hinuz (muss ganz hinten sein)
+    if (f.messageLength > 0) {
+        //TYP
+        txBuffer[txBufferLength] = HeaderType::MESSAGE;  //Header TEXT_MESSAGE
+        txBufferLength ++;
+        //ID
+        memcpy(&txBuffer[txBufferLength], &f.id, sizeof(f.id)); //Payload
+        txBufferLength += sizeof(f.id);
+        //Message
+        memcpy(&txBuffer[txBufferLength], &f.message[0], f.messageLength); //Payload
+        txBufferLength += f.messageLength;
     }
 
     //Bei Frametype TUNE einfach Frame mit 0xFF auffüllen
@@ -117,6 +143,30 @@ bool transmitFrame(Frame &f) {
     //Senden
     return transmitRAW(txBuffer, txBufferLength);
 }
+
+void sendMessage(String dstCall, String text) {
+    //Neuen Frame zusammenbauen
+    Frame f;
+    f.frameType = TEXT_MESSAGE;
+    f.dstCall.call = dstCall;
+    text.toCharArray(f.message, 255);
+    f.messageLength = text.length();
+    f.retry = 0;
+    f.id = millis();
+    f.transmitMillis = 0;
+    //VIA-Calls dazu
+    for (int i = 0; i < peerList.size(); i++) {
+        if (peerList[i].available) {
+            CallsignWithHeader c;
+            c.call = peerList[i].call;
+            c.header = VIA_REPEAT;
+            f.viaCall.push_back(c);
+        }
+    } 
+    //Frame in Sendebuffer
+    txFrameBuffer.push_back(f);
+}
+
 
 void sendPeerList() {
   JsonDocument doc;
@@ -143,7 +193,12 @@ void addPeerList(Peer p) {
         //Serial.printf("Add Peer List %i %s %s\n", i, peerList[i].call, p.call);
         if (peerList[i].call == p.call) {
             add = false;
-            peerList[i] = p;
+            if (peerList[i].available == true) {
+                peerList[i] = p;
+                peerList[i].available = true;
+            } else {
+                peerList[i] = p;
+            }
             break;
         }
     }    

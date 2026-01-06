@@ -13,8 +13,6 @@
 			<div style="flex: 1; min-width: 0;">
 				<h1>Monitor</h1>
 				<div id="monitor" style="height: 200px; overflow-y: auto; border: 1px solid;"> </div>
-				<button id="commandAnnounce">announce</button>
-				<button id="commandTune">tune</button>
 			</div>
 			<div style="flex: 0 0 400px;">
 				<h1>Peers</h1>
@@ -22,14 +20,31 @@
 			</div>
 		</div>
 
-		<h1>Status</h1>
-		<div style="border: 1px solid; width: fit-content;">
-			<table>
-				<tr> <td>Uhrzeit:</td> <td><span id="statusTime"></span> <button id="statusSyncTime">sync</button> </td> </tr>
-			</table>
-		</div> <br>
+		<div style="display: flex; gap: 20px;">
+			<div style="flex: 1; min-width: 0;">
+				<h1>Messages</h1>
+				<div style="overflow-y: auto; border: 1px solid;">
+					<div id="messages" style="overflow-y: auto; height: 200px; justify-content: flex-end; flex-direction: column; display: flex;"></div>
+					<input style="width: 100px;" id="messageDstCall">
+					<input style="width: 400px;" id="messageText">
+					<button id="messageSend">send</button>
+				</div>
+			</div>
+			<div style="flex: 0 0 400px;">
+				<h1>Status</h1>
+				<div style="border: 1px solid; width: fit-content;">
+					<table>
+						<tr> <td>Uhrzeit:</td> <td><span id="statusTime"></span> <button id="statusSyncTime">sync</button> </td> </tr>
+					</table>
+				</div> <br>
+			</div>
+		</div>
 
-		<h1>Einstellungen</h1>
+		<br>
+		<button id="commandAnnounce">announce</button>
+		<button id="commandTune">tune</button>
+
+		<h1>Settings</h1>
 		<div style="border: 1px solid; width: fit-content;">
 			<table>
 				<tr> <td>Callsign</td> <td><input style="width: 200px;" id="settingsMycall"></td> </tr>
@@ -45,11 +60,11 @@
 						<input id='settingsSSID' style='width: 200px;'>
 					</td>
 				</tr>
-				<tr class="AP_MODE_ENABLED"> <td> Passwort </td> <td> <input type="password" id='settingsPassword' style='width: 200px;' > </td> 
+				<tr class="AP_MODE_ENABLED"> <td> Password </td> <td> <input type="password" id='settingsPassword' style='width: 200px;' > </td> 
 				</tr>
 				<tr class="AP_MODE_ENABLED"> <td> DHCP </td> <td> <input type='checkbox' id='settingsDHCP'> </td> </tr> 
-				<tr class="DHCP_ENABLED AP_MODE_ENABLED"> <td> IP-Adresse </td> <td> <input style='width: 100px;' id='settingsWiFiIP'> </td> </tr>
-				<tr class="DHCP_ENABLED AP_MODE_ENABLED"> <td> Subnetz </td> <td> <input style='width: 100px;' id='settingsWifiNetMask'> </td> </tr>
+				<tr class="DHCP_ENABLED AP_MODE_ENABLED"> <td> IP-Address </td> <td> <input style='width: 100px;' id='settingsWiFiIP'> </td> </tr>
+				<tr class="DHCP_ENABLED AP_MODE_ENABLED"> <td> Subnet </td> <td> <input style='width: 100px;' id='settingsWifiNetMask'> </td> </tr>
 				<tr class="DHCP_ENABLED AP_MODE_ENABLED"> <td> Gateway </td> <td> <input style='width: 100px;' id='settingsWifiGateway'> </td> </tr>
 				<tr class="DHCP_ENABLED AP_MODE_ENABLED"> <td> DNS </td> <td> <input style='width: 100px;' id='settingsWifiDNS'> </td> </tr>
 
@@ -128,6 +143,17 @@
 
 			document.getElementById("settingsDHCP").addEventListener("change", function() { settingsVisibility(); });
 
+			document.getElementById("messageSend").addEventListener("click", function() { 
+				var msg = "TX: " + document.getElementById("messageText").value;
+				document.getElementById("messages").innerHTML = document.getElementById("messages").innerHTML + "<br>" + msg; 
+				//Über Weksocket senden
+				var sendMessage = {};
+				sendMessage["text"] = document.getElementById("messageText").value;
+				sendMessage["dstCall"] = document.getElementById("messageDstCall").value;
+				sendWS(JSON.stringify({sendMessage: sendMessage}));
+			});
+
+			
 			
 			document.getElementById("commandAnnounce").addEventListener("click", function() {
 				sendWS(JSON.stringify({announce: true }));
@@ -166,13 +192,13 @@
 					msg += " (RSSI:" + d.monitor.rssi + "dBm SNR:" + d.monitor.snr + "db)";
 					document.getElementById("monitor").innerHTML = document.getElementById("monitor").innerHTML + "<br>" + msg;
 
-					//Text
-					msg = "";
-					if (d.monitor.tx == true) {msg += "TX: ";} else {msg += "RX: ";}
-					for (let i = 0; i < d.monitor.data.length; i++) {
-						msg += String.fromCharCode(d.monitor.data[i]);
-					}
-					document.getElementById("monitor").innerHTML = document.getElementById("monitor").innerHTML + "<br>" + msg;
+					// //Text
+					// msg = "";
+					// if (d.monitor.tx == true) {msg += "TX: ";} else {msg += "RX: ";}
+					// for (let i = 0; i < d.monitor.data.length; i++) {
+					// 	msg += String.fromCharCode(d.monitor.data[i]);
+					// }
+					// document.getElementById("monitor").innerHTML = document.getElementById("monitor").innerHTML + "<br>" + msg;
 
 					//Decodiert
 					msg = "";
@@ -184,30 +210,68 @@
 					var srcCall;
 					var viaCall = [];
 					var dstCall;
+					var id = 0;
+					var message = "";
+					var via = "";
+					var messageFound = false;
 					const decoder = new TextDecoder();
 					//Frame druchlaufen
 					for (i=1; i < frame.length; i++) {
 						//Header prüfen
 						switch (frame[i] & 0xF0) {
-							case 0x00:
-								var len = frame[i] & 0x0F;
-								var payload = frame.slice(i + 1, i + len + 1);
-								srcCall = decoder.decode(new Uint8Array(payload));
-								i += len;
+							case 0x00:	//SRC Call
+								if (!messageFound) {
+									var len = frame[i] & 0x0F;
+									var payload = frame.slice(i + 1, i + len + 1);
+									srcCall = decoder.decode(new Uint8Array(payload));
+									i += len;
+								}
 								break;
-							case 0x10:
-								var len = frame[i] & 0x0F;
-								var payload = frame.slice(i + 1, i + len + 1);
-								dstCall = decoder.decode(new Uint8Array(payload));
-								i += len;
+							case 0x10:	//DST Call
+								if (!messageFound) {
+									var len = frame[i] & 0x0F;
+									var payload = frame.slice(i + 1, i + len + 1);
+									dstCall = decoder.decode(new Uint8Array(payload));
+									i += len;
+								}
 								break;
+							case 0x30:	//VIA_REPEAT
+								if (!messageFound) {
+									var len = frame[i] & 0x0F;
+									var payload = frame.slice(i + 1, i + len + 1);
+									via += " viaR <b>" + decoder.decode(new Uint8Array(payload)) + "</b>";
+									i += len;
+								}
+								break;
+							case 0x40:	//VIA_NO_REPEAT
+								if (!messageFound) {
+									var len = frame[i] & 0x0F;
+									var payload = frame.slice(i + 1, i + len + 1);
+									via += " via <b>" + decoder.decode(new Uint8Array(payload)) + "</b>";
+									i += len;
+								}
+								break;
+							case 0x20: //Message
+								messageFound = true;
+								id = (frame[i + 1] | (frame[i + 2] << 8) | (frame[i + 3] << 16) | (frame[i + 4] << 24)) >>> 0;
+								var payload = frame.slice(i + 5, frame.length + 1);
+								message = decoder.decode(new Uint8Array(payload));
+								//Abbruch
+								i = frame.length + 1;
 						}
 					}
+
+					console.log(via);
+
 					//Frame-Type
 					switch (frame[0]) {
   						case 0x00: msg += "Announce from " + srcCall; break;
   						case 0x01: msg += "Announce Reply from " + srcCall + " to " + dstCall; break;
   						case 0x02: msg += "Tuning Frame from " + srcCall; break;
+  						case 0x03: 
+							msg += "Message from <b>" + srcCall + "</b> to <b>" + dstCall + "</b>";
+							if (via.length > 0) {msg += via;}
+							msg += " id <b>" + id + "</b>: <b>" + message + "</b>"; break;
 					}
 					document.getElementById("monitor").innerHTML = document.getElementById("monitor").innerHTML + "<br>" + msg;
 					document.getElementById('monitor').scrollTop = document.getElementById("monitor").scrollHeight;
@@ -292,7 +356,7 @@
 				if (window.location.hostname.length > 0) {
 					gateway = `ws://${window.location.hostname}/socket`;
 				} else {
-					gateway = "ws://192.168.33.66/socket";
+					gateway = "ws://192.168.33.60/socket";
 				}
 				websocket = new WebSocket(gateway);
 				websocket.onopen = onOpen;

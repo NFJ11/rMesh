@@ -97,7 +97,12 @@ void startWebServer() {
       saveSettings();
     }
 
-      
+    //Nachricht senden
+    if (json["sendMessage"].is<JsonVariant>()) {
+      if (json["sendMessage"]["dstCall"].is<JsonVariant>() && json["sendMessage"]["text"].is<JsonVariant>()) {
+        sendMessage(json["sendMessage"]["dstCall"].as<String>(), json["sendMessage"]["text"].as<String>());
+      }
+    }      
 
     //Uhrzeit Sync
     if (json["time"].is<JsonVariant>()) {

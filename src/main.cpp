@@ -15,7 +15,7 @@
 #include <RadioLib.h>
 
 //Routing
-//Peer peerList[20];
+std::vector<Peer> peerList;
 uint32_t announceTimer = 0;
 
 
@@ -26,8 +26,31 @@ const char* TZ_INFO = "CET-1CEST,M3.5.0,M10.5.0/3";
 uint32_t webSocketTimer = millis();
 uint32_t rebootTimer = 0xFFFFFFFF;
 
+void sendPeerList() {
+  //Abbruch, wenn liste leer
+  if (peerList.size() == 0) {return;}
+  JsonDocument doc;
+  for (int i = 0; i < peerList.size(); i++) {
+    Serial.printf("Peer List #%d %s\n", i, peerList[i].call);
+    doc["peers"][i]["call"] = peerList[i].call;
+    doc["peers"][i]["lastRX"] = peerList[i].lastRX;
+    doc["peers"][i]["rssi"] = peerList[i].rssi;
+    doc["peers"][i]["snr"] = peerList[i].snr;
+    doc["peers"][i]["frqError"] = peerList[i].frqError;
+    doc["peers"][i]["available"] = peerList[i].available;
+  }  
+  String jsonOutput;
+  serializeJson(doc, jsonOutput);
+  ws.textAll(jsonOutput);
+
+}
+
+
 
 void setup() {
+  //Protokoll
+  peerList.reserve(20);
+
   //CPU Frqg fest (soll wegen SPI sinnvoll sein)
   setCpuFrequencyMhz(240);
 
@@ -84,12 +107,11 @@ void loop() {
   //Announce Senden
   if (millis() > announceTimer) {
     announceTimer = millis() + ANNOUNCE_TIME + random(0, ANNOUNCE_TIME);
-    size_t mycallLen = strlen(settings.mycall); 
     uint8_t txBuffer[256];
+    uint8_t txBufferLength = 1;
     txBuffer[0] = 0x00;  //Frametyp -> ANNOUNCE
-    txBuffer[1] = 0x00 | (0x0F & mycallLen);  //Header Absender
-    memcpy(&txBuffer[2], &settings.mycall[0], mycallLen); //Payload
-    if (transmit(txBuffer, mycallLen + 2) == false) {
+    addSourceCall(txBuffer, txBufferLength);
+    if (transmit(txBuffer, txBufferLength) == false) {
       //Nochmal in 100mS versuchen
       announceTimer = millis() + random(0, ANNOUNCE_TIME);
     }
@@ -119,6 +141,66 @@ void loop() {
         String jsonOutput;
         serializeJson(doc, jsonOutput);
         ws.textAll(jsonOutput);
+
+        //Decodieren
+        //Rufzeichen ausschneiden
+        String srcCall = "";
+				String dstCall = "";
+        std::vector<String> viaCall;
+        //Frame druchlaufen
+        for (uint8_t i=1; i < rxSize; i++) {
+          //Header prüfen
+          switch (rxBytes[i] & 0xF0) {
+            case 0x00:
+              for(int ii = i + 1; ii < i + 1 + (rxBytes[i] & 0x0F); ii++) { srcCall += (char)rxBytes[ii]; }
+              i += rxBytes[i] & 0x0F;
+              break;
+            case 0x01:
+              for(int ii = i + 1; ii < i + 1 + (rxBytes[i] & 0x0F); ii++) { dstCall += (char)rxBytes[ii]; }
+              i += rxBytes[i] & 0x0F;
+              break;
+          }
+        }
+        //Tryme Typ prüfen
+        switch (rxBytes[0]) {
+          case 0x00:  //Announce 
+            Serial.printf("SRC: %s\n", srcCall);
+            Serial.printf("DST: %s\n", dstCall);
+
+            //In Peer-Liste einfügen
+            Peer p;
+            p.call = srcCall;
+            p.lastRX = time(NULL);
+            p.frqError = radio.getFrequencyError();
+            p.rssi = radio.getRSSI();
+            p.snr = radio.getSNR();
+            p.available = false;
+            peerList.push_back(p);
+            sendPeerList();
+
+            
+            //Antworten -> MUSS SPÄTER IN SENDE_PUFFER MIT DEFINIERTER ZEIT, WENN GESENDET WIRD !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            uint8_t txBufferLength = 0;
+            uint8_t txBuffer[256];
+            //Frametyp -> ANNOUNCE REPLY
+            txBufferLength += 1; txBuffer[0] = 0x01;  
+            //Absender hinzu
+            addSourceCall(txBuffer, txBufferLength);
+            //Empfänger hinzu
+            txBuffer[txBufferLength] = 0x10 | (0x0F & srcCall.length());  //Header Empfänger
+            txBufferLength += 1; 
+            memcpy(&txBuffer[txBufferLength], &srcCall[0], srcCall.length()); //Empfänger Payload
+            txBufferLength += srcCall.length();
+            //Senden
+            transmit(txBuffer, txBufferLength);
+
+            break;
+
+        }
+
+
+
+
       }  
       radio.startReceive();
     }

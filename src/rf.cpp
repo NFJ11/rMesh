@@ -74,6 +74,13 @@ bool transmit(uint8_t* data, size_t len) {
     return true;
 }
 
+void addSourceCall(uint8_t* data, uint8_t &len) {
+    data[len] = 0x00 | (0x0F & strlen(settings.mycall));  //Header Absender
+    len ++;
+    memcpy(&data[len], &settings.mycall[0], strlen(settings.mycall)); //Payload
+    len += strlen(settings.mycall);
+}
+
 
 // // initialize SX1278 with default settings
 //   Serial.print(F("[SX1278] Initializing ... "));

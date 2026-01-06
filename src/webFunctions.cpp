@@ -30,6 +30,7 @@ void startWebServer() {
   wsHandler.onConnect([](AsyncWebSocket *server, AsyncWebSocketClient *client) {
     Serial.printf("Client %" PRIu32 " connected\n", client->id());
     sendSettings();
+    sendPeerList();
     ws.cleanupClients();
   });
 

@@ -9,9 +9,17 @@
 	
 	<body>
 
-		<h1>Monitor</h1>
-		<div id="monitor" style="height: 200px; overflow-y: auto; border: 1px solid; font-family: monospace;"> </div>
-		<button id="commandAnnounce">announce</button><br>
+		<div style="display: flex; gap: 20px;">
+			<div style="flex: 1;">
+				<h1>Monitor</h1>
+				<div id="monitor" style="height: 200px; overflow-y: auto; border: 1px solid; font-family: monospace;"> </div>
+				<button id="commandAnnounce">announce</button>
+			</div>
+			<div style="flex: 1;">
+				<h1>Peers</h1>
+				<div id="peers" style="height: 200px; overflow-y: auto; border: 1px solid; font-family: monospace;"> </div>
+			</div>
+		</div>
 
 		<h1>Status</h1>
 		<div style="border: 1px solid; width: fit-content;">
@@ -192,11 +200,34 @@
 					//Frame-Type
 					switch (frame[0]) {
   						case 0x00: msg += "Announce from " + srcCall; break;
-  						case 0x01: msg += "Announce Replay from " + srcCall + " to " + dstCall; break;
+  						case 0x01: msg += "Announce Reply from " + srcCall + " to " + dstCall; break;
 					}
 					document.getElementById("monitor").innerHTML = document.getElementById("monitor").innerHTML + "<br>" + msg;
 					document.getElementById('monitor').scrollTop = document.getElementById("monitor").scrollHeight;
 					
+				}
+
+				//Peers
+				if (d.peers) {
+					var peers = "";
+					peers += "<table>";
+					peers += "<tr> <td>Call</td> <td>Last RX</td> <td>RSSI</td> <td>SNR</td> <td>Frq. Error</td> <td>Available</td> </tr>";
+					if (d.peers.length > 0) {
+						d.peers.forEach(function(p, index) {
+							const lastRX = new Date(p.lastRX * 1000);
+							peers += "<tr>";
+							peers += "<td>" + p.call + "</td>";
+							peers += "<td>" + lastRX.toLocaleTimeString('de-DE') + "</td>";
+							peers += "<td>" + p.rssi + "</td>";
+							peers += "<td>" + p.snr + "</td>";
+							peers += "<td>" + parseInt(p.frqError) + "</td>";
+							peers += "<td>" + p.available + "</td>";
+							peers += "</tr>";
+					 		console.log(p);
+					 	});
+					}
+					peers += "</table>";
+					document.getElementById("peers").innerHTML = peers;
 				}
 
 				//Einstellungen

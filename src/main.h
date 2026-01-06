@@ -13,13 +13,16 @@
 #define ANNOUNCE_RANDOM 1 * 60 * 1000   //ANNOUNCE-Zeit + Zufall
 
 
-// struct Peer {
-//     char call[17]; 
-//     time_t lastRX;
-//     float rssi;
-//     float snr;
-//     float frqError;
-// };
+struct Peer {
+    String call; 
+    time_t lastRX;
+    float rssi;
+    float snr;
+    float frqError;
+    bool available;
+};
+
+void sendPeerList();
 
 
 #endif

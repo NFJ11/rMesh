@@ -10,14 +10,15 @@
 	<body>
 
 		<div style="display: flex; gap: 20px;">
-			<div style="flex: 1;">
+			<div style="flex: 1; min-width: 0;">
 				<h1>Monitor</h1>
-				<div id="monitor" style="height: 200px; overflow-y: auto; border: 1px solid; font-family: monospace;"> </div>
+				<div id="monitor" style="height: 200px; overflow-y: auto; border: 1px solid;"> </div>
 				<button id="commandAnnounce">announce</button>
+				<button id="commandTune">tune</button>
 			</div>
-			<div style="flex: 1;">
+			<div style="flex: 0 0 400px;">
 				<h1>Peers</h1>
-				<div id="peers" style="height: 200px; overflow-y: auto; border: 1px solid; font-family: monospace;"> </div>
+				<div id="peers" style="height: 200px; overflow-y: auto; border: 1px solid; "> </div>
 			</div>
 		</div>
 
@@ -44,7 +45,7 @@
 						<input id='settingsSSID' style='width: 200px;'>
 					</td>
 				</tr>
-				<tr class="AP_MODE_ENABLED"> <td> Passwort </td> <td> <input id='settingsPassword' style='width: 200px;' > </td> 
+				<tr class="AP_MODE_ENABLED"> <td> Passwort </td> <td> <input type="password" id='settingsPassword' style='width: 200px;' > </td> 
 				</tr>
 				<tr class="AP_MODE_ENABLED"> <td> DHCP </td> <td> <input type='checkbox' id='settingsDHCP'> </td> </tr> 
 				<tr class="DHCP_ENABLED AP_MODE_ENABLED"> <td> IP-Adresse </td> <td> <input style='width: 100px;' id='settingsWiFiIP'> </td> </tr>
@@ -132,6 +133,9 @@
 				sendWS(JSON.stringify({announce: true }));
 			});
 
+			document.getElementById("commandTune").addEventListener("click", function() {
+				sendWS(JSON.stringify({tune: true }));
+			});
 			
 			document.getElementById("settingsReboot").addEventListener("click", function() {
 				sendWS(JSON.stringify({reboot: true }));
@@ -203,6 +207,7 @@
 					switch (frame[0]) {
   						case 0x00: msg += "Announce from " + srcCall; break;
   						case 0x01: msg += "Announce Reply from " + srcCall + " to " + dstCall; break;
+  						case 0x02: msg += "Tuning Frame from " + srcCall; break;
 					}
 					document.getElementById("monitor").innerHTML = document.getElementById("monitor").innerHTML + "<br>" + msg;
 					document.getElementById('monitor').scrollTop = document.getElementById("monitor").scrollHeight;
@@ -287,7 +292,7 @@
 				if (window.location.hostname.length > 0) {
 					gateway = `ws://${window.location.hostname}/socket`;
 				} else {
-					gateway = "ws://192.168.33.60/socket";
+					gateway = "ws://192.168.33.66/socket";
 				}
 				websocket = new WebSocket(gateway);
 				websocket.onopen = onOpen;

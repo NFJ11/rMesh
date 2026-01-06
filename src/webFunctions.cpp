@@ -119,6 +119,16 @@ void startWebServer() {
       announceTimer = 0;
     }  
 
+    //Tune
+    if (json["tune"].is<JsonVariant>()) {
+      Serial.println("Send tune...");
+      Frame f;
+      f.frameType = FrameType::TUNE;
+      f.transmitMillis = 0;
+      //Frame in SendeBuffer
+      txFrameBuffer.push_back(f);
+    }     
+
     //Reboot
     if (json["reboot"].is<JsonVariant>()) {
       Serial.println("Reboot");

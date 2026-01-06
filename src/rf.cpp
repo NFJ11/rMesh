@@ -8,6 +8,8 @@ SX1278 radio = new Module(LORA_NSS, LORA_DIO0, LORA_RST, LORA_DIO1);
   ICACHE_RAM_ATTR
 #endif
 bool radioFlag;
+std::vector<Peer> peerList;
+std::vector<Frame> txFrameBuffer;
 
 void setRadioflag(void) {
     radioFlag = true;
@@ -18,6 +20,10 @@ void printState(int state) {
 }
 
 void initRadio() {
+    //Protokoll
+    peerList.reserve(20);
+    txFrameBuffer.reserve(10);
+
     //Flags zurücksetzen
     radioFlag = false;
     int state;
@@ -50,7 +56,7 @@ void initRadio() {
 
 }
 
-bool transmit(uint8_t* data, size_t len) {
+bool transmitRAW(uint8_t* data, size_t len) {
     // Prüfen, ob der Kanal frei ist (Channel Activity Detection - CAD)
     if (radio.scanChannel() == RADIOLIB_LORA_DETECTED) {
         //Kanal belegt
@@ -74,6 +80,88 @@ bool transmit(uint8_t* data, size_t len) {
     }
     return true;
 }
+
+
+bool transmitFrame(Frame &f) {
+    //Binärdaten zusammenbauen und senden
+    uint8_t txBuffer[256];
+    uint8_t txBufferLength = 0;
+    //Frame-Typ
+    txBuffer[txBufferLength] = f.frameType; 
+    txBufferLength ++;
+    //Absender
+    txBuffer[txBufferLength] = HeaderType::SRC_CALL | (0x0F & strlen(settings.mycall));  //Header Absender
+    txBufferLength ++;
+    memcpy(&txBuffer[txBufferLength], &settings.mycall[0], strlen(settings.mycall)); //Payload
+    txBufferLength += strlen(settings.mycall);
+    //Empfänger hinzu
+    if (f.dstCall.length() > 0) {
+        txBuffer[txBufferLength] = HeaderType::DST_CALL | (0x0F & f.dstCall.length());  //Header Absender
+        txBufferLength ++;
+        memcpy(&txBuffer[txBufferLength], &f.dstCall[0], f.dstCall.length()); //Payload
+        txBufferLength += f.dstCall.length();
+    }
+
+    //Bei Frametype TUNE einfach Frame mit 0x00 auffüllen
+    if (f.frameType == FrameType::TUNE) {
+        while (txBufferLength < 255) {
+            txBuffer[txBufferLength] = 0x00;
+            txBufferLength ++;
+        }
+    }
+
+    //Senden
+    return transmitRAW(txBuffer, txBufferLength);
+}
+
+void sendPeerList() {
+  JsonDocument doc;
+  for (int i = 0; i < peerList.size(); i++) {
+    //Serial.printf("Peer List #%d %s\n", i, peerList[i].call);
+    doc["peerlist"]["peers"][i]["call"] = peerList[i].call;
+    doc["peerlist"]["peers"][i]["lastRX"] = peerList[i].lastRX;
+    doc["peerlist"]["peers"][i]["rssi"] = peerList[i].rssi;
+    doc["peerlist"]["peers"][i]["snr"] = peerList[i].snr;
+    doc["peerlist"]["peers"][i]["frqError"] = peerList[i].frqError;
+    doc["peerlist"]["peers"][i]["available"] = peerList[i].available;
+  }  
+  doc["peerlist"]["count"] = peerList.size();
+  String jsonOutput;
+  serializeJson(doc, jsonOutput);
+  ws.textAll(jsonOutput);
+}
+
+
+void addPeerList(Peer p) {
+    //In Peers suchen
+    bool add = true;
+    for (int i = 0; i < peerList.size(); i++) {
+        //Serial.printf("Add Peer List %i %s %s\n", i, peerList[i].call, p.call);
+        if (peerList[i].call == p.call) {
+            add = false;
+            peerList[i] = p;
+            break;
+        }
+    }    
+    //Nicht grunfen -> hinzufügen
+    if (add) {
+        peerList.push_back(p);
+    }
+    sendPeerList();
+}
+
+void checkPeerList() {
+    //Peer-Liste bereinigen
+    for (int i = 0; i < peerList.size(); i++) {
+        time_t age = time(NULL) - peerList[i].lastRX;
+        if (age > PEER_TIMEOUT) {
+            peerList.erase(peerList.begin() + i);
+            sendPeerList();
+            break;
+        }
+    }    
+}
+
 
 void addSourceCall(uint8_t* data, uint8_t &len) {
     data[len] = 0x00 | (0x0F & strlen(settings.mycall));  //Header Absender

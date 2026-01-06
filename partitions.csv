@@ -1,0 +1,22 @@
+# Name,   Type, SubType, Offset,  Size, Flags
+nvs,      data, nvs,     ,  0x5000,
+otadata,  data, ota,     ,  0x2000,
+app0,     app,  ota_0,   , 0x170000,
+app1,     app,  ota_1,   , 0x170000,
+spiffs,   data, spiffs,  , 0x32000,
+coredump, data, coredump,, 0x10000,
+
+
+
+Ja, das ist sogar sehr sinnvoll, wenn du den maximalen Platz für deine App herausholen willst. Ohne OTA fällt die zweite App-Partition (app1) und die Steuerungspartition (otadata) komplett weg.
+
+Diesen freien Platz kannst du dann einfach app0 zuschlagen.
+1. Die partitions.csv ohne OTA
+
+In dieser Konfiguration wird der gesamte Speicher für eine einzige große App (factory) und dein Web-Interface genutzt:
+Code-Snippet
+
+# Name,   Type, SubType, Offset,  Size,       Flags
+nvs,      data, nvs,     ,        0x4000,
+app0,     app,  factory, ,        0x3B0000,
+spiffs,   data, spiffs,  ,        0x32000,

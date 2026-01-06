@@ -27,18 +27,17 @@ uint32_t webSocketTimer = millis();
 uint32_t rebootTimer = 0xFFFFFFFF;
 
 void sendPeerList() {
-  //Abbruch, wenn liste leer
-  if (peerList.size() == 0) {return;}
   JsonDocument doc;
   for (int i = 0; i < peerList.size(); i++) {
     Serial.printf("Peer List #%d %s\n", i, peerList[i].call);
-    doc["peers"][i]["call"] = peerList[i].call;
-    doc["peers"][i]["lastRX"] = peerList[i].lastRX;
-    doc["peers"][i]["rssi"] = peerList[i].rssi;
-    doc["peers"][i]["snr"] = peerList[i].snr;
-    doc["peers"][i]["frqError"] = peerList[i].frqError;
-    doc["peers"][i]["available"] = peerList[i].available;
+    doc["peerlist"]["peers"][i]["call"] = peerList[i].call;
+    doc["peerlist"]["peers"][i]["lastRX"] = peerList[i].lastRX;
+    doc["peerlist"]["peers"][i]["rssi"] = peerList[i].rssi;
+    doc["peerlist"]["peers"][i]["snr"] = peerList[i].snr;
+    doc["peerlist"]["peers"][i]["frqError"] = peerList[i].frqError;
+    doc["peerlist"]["peers"][i]["available"] = peerList[i].available;
   }  
+  doc["peerlist"]["count"] = peerList.size();
   String jsonOutput;
   serializeJson(doc, jsonOutput);
   ws.textAll(jsonOutput);

@@ -208,12 +208,12 @@
 				}
 
 				//Peers
-				if (d.peers) {
+				if (d.peerlist) {
 					var peers = "";
 					peers += "<table>";
 					peers += "<tr> <td>Call</td> <td>Last RX</td> <td>RSSI</td> <td>SNR</td> <td>Frq. Error</td> <td>Available</td> </tr>";
-					if (d.peers.length > 0) {
-						d.peers.forEach(function(p, index) {
+					if (d.peerlist.count > 0) {
+						d.peerlist.peers.forEach(function(p, index) {
 							const lastRX = new Date(p.lastRX * 1000);
 							peers += "<tr>";
 							peers += "<td>" + p.call + "</td>";
@@ -223,7 +223,6 @@
 							peers += "<td>" + parseInt(p.frqError) + "</td>";
 							peers += "<td>" + p.available + "</td>";
 							peers += "</tr>";
-					 		console.log(p);
 					 	});
 					}
 					peers += "</table>";

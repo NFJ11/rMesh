@@ -36,7 +36,7 @@ enum HeaderType {
     DST_CALL = 0x10
 };
 
-
+extern bool transmittingFlag;
 extern bool radioFlag;
 extern SX1278 radio;
 extern std::vector<Peer> peerList;

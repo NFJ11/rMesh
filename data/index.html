@@ -199,7 +199,7 @@
 								var len = frame[i] & 0x0F;
 								var payload = frame.slice(i + 1, i + len + 1);
 								dstCall = decoder.decode(new Uint8Array(payload));
-								i += len + 1;
+								i += len;
 								break;
 						}
 					}

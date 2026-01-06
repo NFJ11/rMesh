@@ -8,6 +8,8 @@ SX1278 radio = new Module(LORA_NSS, LORA_DIO0, LORA_RST, LORA_DIO1);
   ICACHE_RAM_ATTR
 #endif
 bool radioFlag;
+bool transmittingFlag;
+
 std::vector<Peer> peerList;
 std::vector<Frame> txFrameBuffer;
 
@@ -26,6 +28,7 @@ void initRadio() {
 
     //Flags zurücksetzen
     radioFlag = false;
+    transmittingFlag = false;
     int state;
 
     //Init
@@ -63,6 +66,7 @@ bool transmitRAW(uint8_t* data, size_t len) {
         return false;
     } else {
         //Senden
+        transmittingFlag = true;
         radio.startTransmit(data, len);
         //Daten über Websocket senden
         JsonDocument doc;
@@ -102,10 +106,10 @@ bool transmitFrame(Frame &f) {
         txBufferLength += f.dstCall.length();
     }
 
-    //Bei Frametype TUNE einfach Frame mit 0x00 auffüllen
+    //Bei Frametype TUNE einfach Frame mit 0xFF auffüllen
     if (f.frameType == FrameType::TUNE) {
         while (txBufferLength < 255) {
-            txBuffer[txBufferLength] = 0x00;
+            txBuffer[txBufferLength] = 0xFF;
             txBufferLength ++;
         }
     }

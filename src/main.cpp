@@ -95,16 +95,18 @@ void loop() {
   }
   
   //Prüfen, ob was gesendet werden muss
-  for (int i = 0; i < txFrameBuffer.size(); i++) {
-    if (millis() > txFrameBuffer[i].transmitMillis) {
-      //Frame senden
-      if (transmitFrame(txFrameBuffer[i])) {
-        //Senden OK
-        //Aus Liste löschen
-        txFrameBuffer.erase(txFrameBuffer.begin() + i);
-      }else {
-        //Nochmal versuchen
-        txFrameBuffer[i].transmitMillis = millis() + TX_BUSY_RETRY;
+  if (transmittingFlag == false) {
+    for (int i = 0; i < txFrameBuffer.size(); i++) {
+      if (millis() > txFrameBuffer[i].transmitMillis) {
+        //Frame senden
+        if (transmitFrame(txFrameBuffer[i])) {
+          //Senden OK
+          //Aus Liste löschen
+          txFrameBuffer.erase(txFrameBuffer.begin() + i);
+        }else {
+          //Nochmal versuchen
+          txFrameBuffer[i].transmitMillis = millis() + TX_BUSY_RETRY;
+        }
       }
     }
   }
@@ -187,6 +189,7 @@ void loop() {
     }
     //Senden fertig
     if (irqFlags == 0x08) {
+      transmittingFlag = false;
       radio.startReceive();
     }
   }

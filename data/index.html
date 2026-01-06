@@ -9,8 +9,8 @@
 	
 	<body>
 
-		<h1>RAW-RX</h1>
-		<div id="rawRX" style="height: 200px; overflow-y: auto; border: 1px solid; font-family: monospace;"> </div>
+		<h1>Monitor</h1>
+		<div id="monitor" style="height: 200px; overflow-y: auto; border: 1px solid; font-family: monospace;"> </div>
 		<button id="commandAnnounce">announce</button><br>
 
 		<h1>Status</h1>
@@ -74,7 +74,10 @@
 						<option value="12">12 - Maximum (Deep Indoor)</option>	
 					</select> 
 				</td> </tr>
-				<tr> <td>Sync Word</td> <td><input style="width: 200px;" id="settingsLoraSyncWord"></td> </tr>				
+				<tr> <td>Sync Word</td> <td><input style="width: 200px;" id="settingsLoraSyncWord"></td> </tr>		
+				<tr> <td>PreambleLength</td> <td><input style="width: 200px;" id="settingsLoraPreambleLength"></td> </tr>		
+				
+				
 			</table>
 			<button id="settingsSave">Save</button>
 			<button id="settingsReboot">Reboot</button> <br>
@@ -107,6 +110,7 @@
 				settings["loraSyncWord"] = parseInt(document.getElementById("settingsLoraSyncWord").value, 16);
 				settings["loraCodingRate"] = parseInt(document.getElementById("settingsLoraCodingRate").value);
 				settings["loraSpreadingFactor"] = parseInt(document.getElementById("settingsLoraSpreadingFactor").value);
+				settings["loraPreambleLength"] = parseInt(document.getElementById("settingsLoraPreambleLength").value);
 
 				sendWS(JSON.stringify({settings: settings}));
 			});
@@ -143,17 +147,55 @@
 
 				//RAW-RX
 				if (d.monitor) {
-					var msg = "";
+					var msg = "<br>";
+					//Bytes
 					if (d.monitor.tx == true) {msg += "TX: ";} else {msg += "RX: ";}
 					msg += d.monitor.data.map(b => b.toString(16).padStart(2, '0')).join(' ').toUpperCase();
-					msg += " (RSSI:" + d.monitor.rssi + "dBm SNR:" + d.monitor.snr + "db)<br>";
-					if (d.monitor.tx == true) {msg += "TX: ";} else {msg += "RX: ";}
+					msg += " (RSSI:" + d.monitor.rssi + "dBm SNR:" + d.monitor.snr + "db)";
+					document.getElementById("monitor").innerHTML = document.getElementById("monitor").innerHTML + "<br>" + msg;
 
+					//Text
+					msg = "";
+					if (d.monitor.tx == true) {msg += "TX: ";} else {msg += "RX: ";}
 					for (let i = 0; i < d.monitor.data.length; i++) {
 						msg += String.fromCharCode(d.monitor.data[i]);
 					}
-					document.getElementById("rawRX").innerHTML = document.getElementById("rawRX").innerHTML + "<br>" + msg;
-					document.getElementById('rawRX').scrollTop = document.getElementById("rawRX").scrollHeight;
+					document.getElementById("monitor").innerHTML = document.getElementById("monitor").innerHTML + "<br>" + msg;
+
+					//Decodiert
+					msg = "";
+					if (d.monitor.tx == true) {msg += "TX: ";} else {msg += "RX: ";}
+					//Rufzeichen ausschneiden
+					var frame = d.monitor.data;
+					var srcCall;
+					var viaCall = [];
+					var dstCall;
+					const decoder = new TextDecoder();
+					//Frame druchlaufen
+					for (i=1; i < frame.length; i++) {
+						//Header prüfen
+						switch (frame[i] & 0xF0) {
+							case 0x00:
+								var len = frame[i] & 0x0F;
+								var payload = frame.slice(i + 1, i + len + 1);
+								srcCall = decoder.decode(new Uint8Array(payload));
+								i += len;
+								break;
+							case 0x10:
+								var len = frame[i] & 0x0F;
+								var payload = frame.slice(i + 1, i + len + 1);
+								dstCall = decoder.decode(new Uint8Array(payload));
+								i += len + 1;
+								break;
+						}
+					}
+					//Frame-Type
+					switch (frame[0]) {
+  						case 0x00: msg += "Announce from " + srcCall; break;
+  						case 0x01: msg += "Announce Replay from " + srcCall + " to " + dstCall; break;
+					}
+					document.getElementById("monitor").innerHTML = document.getElementById("monitor").innerHTML + "<br>" + msg;
+					document.getElementById('monitor').scrollTop = document.getElementById("monitor").scrollHeight;
 					
 				}
 
@@ -175,6 +217,8 @@
 					document.getElementById("settingsLoraSyncWord").value = d.settings.loraSyncWord.toString(16).padStart(2, '0').toUpperCase(); 
 					document.getElementById("settingsLoraCodingRate").value = d.settings.loraCodingRate; 
 					document.getElementById("settingsLoraSpreadingFactor").value = d.settings.loraSpreadingFactor; 
+					document.getElementById("settingsLoraPreambleLength").value = d.settings.loraPreambleLength; 
+					
 					settingsVisibility();
 				}
 
@@ -211,7 +255,7 @@
 				if (window.location.hostname.length > 0) {
 					gateway = `ws://${window.location.hostname}/socket`;
 				} else {
-					gateway = "ws://192.168.33.66/socket";
+					gateway = "ws://192.168.33.60/socket";
 				}
 				websocket = new WebSocket(gateway);
 				websocket.onopen = onOpen;

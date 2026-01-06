@@ -17,7 +17,7 @@ void defaultSettings() {
     String("de.pool.ntp.org").toCharArray(settings.ntpServer, 64);
     settings.apMode = false;
     settings.dhcpActive = false;
-    settings.wifiIP = IPAddress(192,168,33,66);
+    settings.wifiIP = IPAddress(192,168,33,60);
     settings.wifiNetMask = IPAddress(255,255,255,0);
     settings.wifiGateway = IPAddress(192,168,33,4);
     settings.wifiDNS = IPAddress(192,168,33,4);
@@ -27,6 +27,7 @@ void defaultSettings() {
     settings.loraSyncWord = 0x2b;
     settings.loraCodingRate = 6;
     settings.loraSpreadingFactor = 11;
+    settings.loraPreambleLength = 8;
     saveSettings();
 }
 
@@ -81,6 +82,7 @@ void showSettings() {
     Serial.printf("loraSyncWord: %X\n", settings.loraSyncWord);
     Serial.printf("loraCodingRate: %d\n", settings.loraCodingRate);
     Serial.printf("loraSpreadingFactor: %d\n", settings.loraSpreadingFactor);
+    Serial.printf("loraPreambleLength: %d\n", settings.loraPreambleLength);
     Serial.println();
 }
 
@@ -115,6 +117,7 @@ void sendSettings() {
     doc["settings"]["loraSyncWord"] = settings.loraSyncWord;
     doc["settings"]["loraCodingRate"] = settings.loraCodingRate;
     doc["settings"]["loraSpreadingFactor"] = settings.loraSpreadingFactor;
+    doc["settings"]["loraPreambleLength"] = settings.loraPreambleLength;
 
 
   String jsonOutput;

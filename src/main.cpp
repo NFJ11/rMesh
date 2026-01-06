@@ -28,9 +28,6 @@ uint32_t rebootTimer = 0xFFFFFFFF;
 
 
 void setup() {
-
-
-
   //CPU Frqg fest (soll wegen SPI sinnvoll sein)
   setCpuFrequencyMhz(240);
 
@@ -77,9 +74,6 @@ void setup() {
   initRadio();
 
 
-  //Test-Daten
-  // String("DH1NFJ").toCharArray(peerList[0].call, 17);
-  // peerList[0].snr = 100;
 
 }
 
@@ -87,14 +81,15 @@ void loop() {
   //WiFi Status anzeigen (LED)
   showWiFiStatus();  
 
-  //announce Senden
+  //Announce Senden
   if (millis() > announceTimer) {
     announceTimer = millis() + ANNOUNCE_TIME + random(0, ANNOUNCE_TIME);
+    size_t mycallLen = strlen(settings.mycall); 
     uint8_t txBuffer[256];
     txBuffer[0] = 0x00;  //Frametyp -> ANNOUNCE
-    size_t mycallLen = strlen(settings.mycall); 
-    memcpy(&txBuffer[1], &settings.mycall[0], mycallLen); //Rufzeichen reinkopieren
-    if (transmit(txBuffer, mycallLen + 1) == false) {
+    txBuffer[1] = 0x00 | (0x0F & mycallLen);  //Header Absender
+    memcpy(&txBuffer[2], &settings.mycall[0], mycallLen); //Payload
+    if (transmit(txBuffer, mycallLen + 2) == false) {
       //Nochmal in 100mS versuchen
       announceTimer = millis() + random(0, ANNOUNCE_TIME);
     }
@@ -103,8 +98,6 @@ void loop() {
   if (radioFlag) {
     radioFlag = false;
     uint16_t irqFlags = radio.getIRQFlags();
-    Serial.printf("Flags %X\n", irqFlags);
-
     //Daten Empfangen
     if (irqFlags == 0x50) {
       //Prüfen, ob was empfangen wurde
@@ -127,19 +120,13 @@ void loop() {
         serializeJson(doc, jsonOutput);
         ws.textAll(jsonOutput);
       }  
-      radio.standby();
       radio.startReceive();
     }
-
     //Senden fertig
     if (irqFlags == 0x08) {
-      radio.standby();
       radio.startReceive();
     }
-
   }
-
-
 
   //Status über Websocket senden
   if (millis() > webSocketTimer) {

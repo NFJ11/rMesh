@@ -21,7 +21,7 @@ struct Settings {
   uint8_t loraSyncWord;
   uint8_t loraCodingRate;
   uint8_t loraSpreadingFactor;
-
+  int16_t loraPreambleLength;
 };
 
 extern Settings settings;

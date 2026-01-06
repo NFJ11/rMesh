@@ -91,6 +91,7 @@ void startWebServer() {
       if (json["settings"]["loraSyncWord"].is<JsonVariant>()) { settings.loraSyncWord = json["settings"]["loraSyncWord"].as<uint8_t>(); }
       if (json["settings"]["loraCodingRate"].is<JsonVariant>()) { settings.loraCodingRate = json["settings"]["loraCodingRate"].as<uint8_t>(); }
       if (json["settings"]["loraSpreadingFactor"].is<JsonVariant>()) { settings.loraSpreadingFactor = json["settings"]["loraSpreadingFactor"].as<uint8_t>(); }
+      if (json["settings"]["loraPreambleLength"].is<JsonVariant>()) { settings.loraPreambleLength = json["settings"]["loraPreambleLength"].as<int16_t>(); }
       initRadio();
       saveSettings();
     }
@@ -113,7 +114,7 @@ void startWebServer() {
 
     //Announce
     if (json["announce"].is<JsonVariant>()) {
-      Serial.println("Announce");
+      Serial.println("Send manual announce....");
       announceTimer = 0;
     }  
 

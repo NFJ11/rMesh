@@ -37,6 +37,8 @@ void initRadio() {
     printState(radio.setCodingRate(settings.loraCodingRate));
     Serial.printf("[SX1278] Set SpreadingFacr to %d ... ", settings.loraSpreadingFactor);
     printState(radio.setSpreadingFactor(settings.loraSpreadingFactor));
+    Serial.printf("[SX1278] Set PreambleLength to %d ... ", settings.loraPreambleLength);
+    printState(radio.setPreambleLength(settings.loraPreambleLength));
 
     //"Interrupts"
     radio.setPacketReceivedAction(setRadioflag);

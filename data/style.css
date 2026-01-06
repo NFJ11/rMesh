@@ -6,7 +6,6 @@ p, h1, h2, h3, h4, h5, h6, a, div, body, table, input {
 }
 
 body {
-	text-align: center;
 	background-color: #AAAAAA;
 }
 
@@ -64,55 +63,6 @@ li {
 	padding-top:3px;
 	padding-bottom:3px;
 }	
-
-
-.led-checkbox-green input {
-  position: absolute;
-  opacity: 0;
-  height: 0;
-  width: 0;
-  font-size: 50px;
-  
-}
-
-.led-checkbox-green .checkmark {
-  position: relative;
-  display: inline-block;
-  margin: 0 auto;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background-color: #006000;
-  box-shadow: rgba(0, 0, 0, 0.7) 0 0px 1px 0px;
-}
-	
-.led-checkbox-green .checkmark:after {
-  content: "";
-  position: relative;
-  display: none;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background-color: #90FF00;
-  box-shadow: rgba(0, 0, 0, 0.7) 0 0px 3px 0px;
-}
-
-.led-checkbox-green input:checked ~ .checkmark:after {
-  display: block;
-}
-
-.led-text {
-  margin-left: 20px;
-  position:absolute; 
-  top: -1px;
-}
-
-.checkbox-text{
-	position: relative;
-    vertical-align: middle;
-    left: 3px;
-	bottom: 2px;
-}
 
 
 

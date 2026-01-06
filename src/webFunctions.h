@@ -8,6 +8,8 @@
 
 
 extern AsyncWebSocket ws;
+extern uint32_t rebootTimer;
+extern uint32_t announceTimer;
 
 void startWebServer();
 String webProcessor(const String& var);

@@ -10,6 +10,7 @@
 #include "soc/timer_group_reg.h"
 #include "main.h"
 #include "esp_task_wdt.h"
+#include "rf.h"
 
 
 AsyncWebServer webServer(80);
@@ -28,6 +29,7 @@ void startWebServer() {
 
   wsHandler.onConnect([](AsyncWebSocket *server, AsyncWebSocketClient *client) {
     Serial.printf("Client %" PRIu32 " connected\n", client->id());
+    sendSettings();
     ws.cleanupClients();
   });
 
@@ -43,9 +45,84 @@ void startWebServer() {
 
   //Empfangene Daten auswerten
   wsHandler.onMessage([](AsyncWebSocket *server, AsyncWebSocketClient *client, const uint8_t *data, size_t len) {
+    //JSON 
+    JsonDocument json;
+    DeserializationError error = deserializeJson(json, data, len);
 
-    switch (data[0]) {
+    //PING (nur zum test)
+    if (json["ping"].is<JsonVariant>()) {
+      //Serial.println(json["ping"].as<String>());
     }
+
+    //Einstellungen speichern
+    if (json["settings"].is<JsonVariant>()) {
+      Serial.println("Einstellungen");
+
+      if (json["settings"]["mycall"].is<JsonVariant>()) { 
+        String mycall = json["settings"]["mycall"].as<String>();
+        mycall.toUpperCase();
+        mycall.toCharArray(settings.mycall, sizeof(settings.mycall));
+        //strlcpy(settings.mycall, json["settings"]["mycall"] | "", sizeof(settings.mycall)); 
+      }
+      if (json["settings"]["ntp"].is<JsonVariant>()) { strlcpy(settings.ntpServer, json["settings"]["ntp"] | "", sizeof(settings.ntpServer)); }
+      if (json["settings"]["dhcpActive"].is<JsonVariant>()) { settings.dhcpActive = json["settings"]["dhcpActive"].as<bool>(); }
+      if (json["settings"]["wifiSSID"].is<JsonVariant>()) { strlcpy(settings.wifiSSID, json["settings"]["wifiSSID"] | "", sizeof(settings.wifiSSID)); }
+      if (json["settings"]["wifiPassword"].is<JsonVariant>()) { strlcpy(settings.wifiPassword, json["settings"]["wifiPassword"] | "", sizeof(settings.wifiPassword)); }
+      if (json["settings"]["apMode"].is<JsonVariant>()) { settings.apMode = json["settings"]["apMode"].as<bool>(); }
+      if (json["settings"]["wifiIP"].is<JsonVariant>()) { 
+        JsonArray ipArray = json["settings"]["wifiIP"];
+        for (int i = 0; i < 4; i++) {settings.wifiIP[i] = ipArray[i] | 0; }
+      }
+      if (json["settings"]["wifiNetMask"].is<JsonVariant>()) { 
+        JsonArray ipArray = json["settings"]["wifiNetMask"];
+        for (int i = 0; i < 4; i++) {settings.wifiNetMask[i] = ipArray[i] | 0; }
+      }
+      if (json["settings"]["wifiGateway"].is<JsonVariant>()) { 
+        JsonArray ipArray = json["settings"]["wifiGateway"];
+        for (int i = 0; i < 4; i++) {settings.wifiGateway[i] = ipArray[i] | 0; }
+      }
+      if (json["settings"]["wifiDNS"].is<JsonVariant>()) { 
+        JsonArray ipArray = json["settings"]["wifiDNS"];
+        for (int i = 0; i < 4; i++) {settings.wifiDNS[i] = ipArray[i] | 0; }
+      }
+      if (json["settings"]["loraFrequency"].is<JsonVariant>()) { settings.loraFrequency = json["settings"]["loraFrequency"].as<float>(); }
+      if (json["settings"]["loraOutputPower"].is<JsonVariant>()) { settings.loraOutputPower = json["settings"]["loraOutputPower"].as<int8_t>(); }
+      if (json["settings"]["loraBandwidth"].is<JsonVariant>()) { settings.loraBandwidth = json["settings"]["loraBandwidth"].as<float>(); }
+      if (json["settings"]["loraSyncWord"].is<JsonVariant>()) { settings.loraSyncWord = json["settings"]["loraSyncWord"].as<uint8_t>(); }
+      if (json["settings"]["loraCodingRate"].is<JsonVariant>()) { settings.loraCodingRate = json["settings"]["loraCodingRate"].as<uint8_t>(); }
+      if (json["settings"]["loraSpreadingFactor"].is<JsonVariant>()) { settings.loraSpreadingFactor = json["settings"]["loraSpreadingFactor"].as<uint8_t>(); }
+      initRadio();
+      saveSettings();
+    }
+
+      
+
+    //Uhrzeit Sync
+    if (json["time"].is<JsonVariant>()) {
+      struct timeval tv;
+      tv.tv_sec = json["time"].as<time_t>();
+      tv.tv_usec = 0;
+      settimeofday(&tv, NULL);
+    }
+
+    //WiFi Scannen
+    if (json["scanWifi"].is<JsonVariant>()) {
+      Serial.println("WiFi Scan....");
+      WiFi.scanNetworks(true);
+    }
+
+    //Announce
+    if (json["announce"].is<JsonVariant>()) {
+      Serial.println("Announce");
+      announceTimer = 0;
+    }  
+
+    //Reboot
+    if (json["reboot"].is<JsonVariant>()) {
+      Serial.println("Reboot");
+      rebootTimer = millis() + 2500;
+    }    
+
 
   });
   

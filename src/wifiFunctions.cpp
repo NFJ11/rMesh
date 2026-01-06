@@ -7,31 +7,32 @@
 unsigned long long ledTimer = 0;
 byte wifiStatus = 0xff;
 
-void wifiInit() {
-  //Wifi Init
-  WiFi.mode(WIFI_STA);
-  if (settings.apMode) {
-    //AP-Mode
-    Serial.println("Starte WiFi AP-Mode");
-    WiFi.mode(WIFI_AP);
-    WiFi.softAPConfig(IPAddress(192,168,1,1), IPAddress(192,168,1,1), IPAddress(255,255,255,0));
-    WiFi.softAP(String(settings.name));
-  } else {
-    Serial.println("Starte WiFi Client-Mode");
-    WiFi.disconnect();
-    WiFi.mode(WIFI_STA);
-    if (!settings.dhcpActive) {
-        //Feste IP
-        WiFi.config(settings.wifiIP, settings.wifiGateway, settings.wifiNetMask, settings.wifiDNS);
+void onWiFiScanDone(WiFiEvent_t event, WiFiEventInfo_t info) {
+    Serial.println("scan fertig...");
+    int n = WiFi.scanComplete();
+    JsonDocument doc;
+    for (int i = 0; i < n; ++i) {
+        doc["wifiScan"][i]["ssid"] = WiFi.SSID(i).c_str();
+        doc["wifiScan"][i]["rssi"] = WiFi.RSSI(i);
+        doc["wifiScan"][i]["channel"] = WiFi.channel(i);
+        switch (WiFi.encryptionType(i)){
+            case WIFI_AUTH_OPEN: doc["wifiScan"][i]["encryption"] = "open"; break;
+            case WIFI_AUTH_WEP: doc["wifiScan"][i]["encryption"] = "WEP"; break;
+            case WIFI_AUTH_WPA_PSK: doc["wifiScan"][i]["encryption"] = "WPA"; break;
+            case WIFI_AUTH_WPA2_PSK: doc["wifiScan"][i]["encryption"] = "WPA2"; break;
+            case WIFI_AUTH_WPA_WPA2_PSK: doc["wifiScan"][i]["encryption"] = "WPA+WPA2"; break;
+            case WIFI_AUTH_WPA2_ENTERPRISE: doc["wifiScan"][i]["encryption"] = "WPA2-EAP"; break;
+            case WIFI_AUTH_WPA3_PSK: doc["wifiScan"][i]["encryption"] = "WPA3"; break;
+            case WIFI_AUTH_WPA2_WPA3_PSK: doc["wifiScan"][i]["encryption"] = "WPA2+WPA3"; break;
+            case WIFI_AUTH_WAPI_PSK: doc["wifiScan"][i]["encryption"] = "WAPI"; break;
+            default: doc["wifiScan"][i]["encryption"] = "unknown";
+        }
     }
-    WiFi.begin(settings.wifiSSID, settings.wifiPassword);
-  }
-}
+    String jsonOutput;
+    serializeJson(doc, jsonOutput);
+    ws.textAll(jsonOutput);
 
-void debugAvailableNetworks() {
-  int n = WiFi.scanNetworks();
-
-  if (n == 0) {
+    if (n == 0) {
         Serial.println("no networks found");
     } else {
         Serial.print(n);
@@ -80,11 +81,37 @@ void debugAvailableNetworks() {
                 Serial.print("unknown");
             }
             Serial.println();
-            delay(10);
         }
     }
     Serial.println("");
 }
+
+void wifiInit() {
+  //Wifi Init
+  WiFi.mode(WIFI_STA);
+  if (settings.apMode) {
+    //AP-Mode
+    Serial.println("Starte WiFi AP-Mode");
+    WiFi.mode(WIFI_AP);
+    WiFi.softAPConfig(IPAddress(192,168,1,1), IPAddress(192,168,1,1), IPAddress(255,255,255,0));
+    WiFi.softAP("rMesh");
+  } else {
+    Serial.println("Starte WiFi Client-Mode");
+    WiFi.disconnect();
+    WiFi.mode(WIFI_STA);
+    if (!settings.dhcpActive) {
+        //Feste IP
+        WiFi.config(settings.wifiIP, settings.wifiGateway, settings.wifiNetMask, settings.wifiDNS);
+    }
+    WiFi.begin(settings.wifiSSID, settings.wifiPassword);
+  }
+  WiFi.setSleep(false);
+  WiFi.setHostname(settings.mycall);
+  WiFi.setTxPower(WIFI_POWER_19_5dBm);  
+  WiFi.onEvent(onWiFiScanDone, ARDUINO_EVENT_WIFI_SCAN_DONE);  
+}
+
+
 
 void showWiFiStatus() {
   //Status-LED

@@ -1,5 +1,4 @@
 #include <Arduino.h>
-#include <RadioLib.h>
 #include <main.h>
 #include <AsyncTCP.h>
 #include <WiFi.h>
@@ -11,31 +10,27 @@
 #include "soc/timer_group_struct.h"
 #include "soc/timer_group_reg.h"
 #include "settings.h"
+#include "time.h"
+#include "rf.h"
+#include <RadioLib.h>
+
+//Routing
+//Peer peerList[20];
+uint32_t announceTimer = 0;
+
+
+//Uhrzeit 
+const char* TZ_INFO = "CET-1CEST,M3.5.0,M10.5.0/3";
 
 //Timing
 uint32_t webSocketTimer = millis();
 uint32_t rebootTimer = 0xFFFFFFFF;
 
 
-//RadioLib config
-SX1278 radio = new Module(LORA_NSS, LORA_DIO0, LORA_RST, LORA_DIO1);
-bool receivedFlag = false;
-#if defined(ESP8266) || defined(ESP32)
-  ICACHE_RAM_ATTR
-#endif
-
-void setRxFlag(void) {
-  // we got a packet, set the flag
-  receivedFlag = true;
-}
-
-bool transmittedFlag = false;
-void setTxFlag(void) {
-  // we sent a packet, set the flag
-  transmittedFlag = true;
-}
-
 void setup() {
+
+
+
   //CPU Frqg fest (soll wegen SPI sinnvoll sein)
   setCpuFrequencyMhz(240);
 
@@ -53,6 +48,7 @@ void setup() {
 
   //Einstellungen laden
   loadSettings();
+  defaultSettings();
   if (checkSettings() == false) {
     defaultSettings();
     saveSettings();
@@ -61,9 +57,11 @@ void setup() {
 
   //WiFi Starten
   wifiInit();
-  WiFi.setSleep(false);
-  WiFi.setHostname(settings.name);
-  WiFi.setTxPower(WIFI_POWER_19_5dBm);  
+
+  //Zeit setzzen
+  struct timeval tv = { .tv_sec = 0, .tv_usec = 0 };
+  settimeofday(&tv, NULL);
+  configTzTime(TZ_INFO, settings.ntpServer);
 
   // Initialize LittleFS
   if (!LittleFS.begin(true)) {
@@ -74,12 +72,98 @@ void setup() {
 
   //WEB-Server starten
   startWebServer();
-  
+
+  //Radio Init
+  initRadio();
+
+
+  //Test-Daten
+  // String("DH1NFJ").toCharArray(peerList[0].call, 17);
+  // peerList[0].snr = 100;
+
 }
 
 void loop() {
   //WiFi Status anzeigen (LED)
   showWiFiStatus();  
+
+  //announce Senden
+  if (millis() > announceTimer) {
+    announceTimer = millis() + ANNOUNCE_TIME + random(0, ANNOUNCE_TIME);
+    uint8_t txBuffer[256];
+    txBuffer[0] = 0x00;  //Frametyp -> ANNOUNCE
+    size_t mycallLen = strlen(settings.mycall); 
+    memcpy(&txBuffer[1], &settings.mycall[0], mycallLen); //Rufzeichen reinkopieren
+    if (transmit(txBuffer, mycallLen + 1) == false) {
+      //Nochmal in 100mS versuchen
+      announceTimer = millis() + random(0, ANNOUNCE_TIME);
+    }
+  }
+  
+  if (radioFlag) {
+    radioFlag = false;
+    uint16_t irqFlags = radio.getIRQFlags();
+    Serial.printf("Flags %X\n", irqFlags);
+
+    //Daten Empfangen
+    if (irqFlags == 0x50) {
+      //Prüfen, ob was empfangen wurde
+      byte rxBytes[256];
+      int rxSize = radio.getPacketLength();
+      int state = radio.readData(rxBytes, rxSize);
+      if (state == RADIOLIB_ERR_NONE) {
+        Serial.println("[SX1278] RX");
+
+        //Daten über Websocket senden
+        JsonDocument doc;
+        for (int i = 0; i < rxSize; i++) {
+          doc["monitor"]["data"][i] = rxBytes[i];
+        }
+        doc["monitor"]["tx"] = false;
+        doc["monitor"]["rssi"] = radio.getRSSI();
+        doc["monitor"]["snr"] = radio.getSNR();
+        doc["monitor"]["frequencyError"] = radio.getFrequencyError();
+        String jsonOutput;
+        serializeJson(doc, jsonOutput);
+        ws.textAll(jsonOutput);
+      }  
+      radio.standby();
+      radio.startReceive();
+    }
+
+    //Senden fertig
+    if (irqFlags == 0x08) {
+      radio.standby();
+      radio.startReceive();
+    }
+
+  }
+
+
+
+  //Status über Websocket senden
+  if (millis() > webSocketTimer) {
+    webSocketTimer = millis() + 1000;
+    JsonDocument doc;
+    doc["time"] = time(NULL);
+    String jsonOutput;
+    serializeJson(doc, jsonOutput);
+    ws.textAll(jsonOutput);
+
+
+
+
+
+    // Serial.println(time(NULL));
+    // struct tm timeinfo;
+    // time_t now;
+    // time(&now);
+    // localtime_r(&now, &timeinfo);
+    // char timeString[20]; 
+    // strftime(timeString, sizeof(timeString), "%d.%m.%Y %H:%M:%S", &timeinfo); // %d=Tag, %m=Monat, %Y=Jahr, %H=Stunde, %M=Minute, %S=Sekunde
+    // Serial.println(timeString);
+
+  }
 
   //Reboot
   if (millis() > rebootTimer) {ESP.restart();}

@@ -9,6 +9,17 @@
 
 #define PIN_WIFI_LED 25      //LED WiFi-Status (ein = AP-Mode, blinken = Client-Mode, aus = nicht verbunden)
 #define AP_MODE_TASTER 0     //Taster Umschaltung WiFi CLient/AP
+#define ANNOUNCE_TIME 5 * 60 * 1000  //ANNOUNCE Baken
+#define ANNOUNCE_RANDOM 1 * 60 * 1000   //ANNOUNCE-Zeit + Zufall
+
+
+// struct Peer {
+//     char call[17]; 
+//     time_t lastRX;
+//     float rssi;
+//     float snr;
+//     float frqError;
+// };
 
 
 #endif

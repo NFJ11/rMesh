@@ -4,235 +4,267 @@
 		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" /> 
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<link rel="stylesheet" type="text/css" href="style.css"  />
-		 <title>%NAME%</title>
+		 <title>rMesh</title>
 	</head>
 	
 	<body>
-		<div style="position:relative; border:1px solid; display:inline-block; background-color: #AAAAAA; width:500px; height:230px;">
-			
-			<h1 style="position:relative; top:-10px; "> %NAME% </h1>
-			
-			<a href="settings.html"> <img style="position:absolute; top:3px; right:5px; width:20px;" src="settings.png"> </a>
-			<img style="position:absolute; top:3px; right:30px; width:20px;" id="wifiimage">
 
-			<canvas style="position:absolute; top:30px; left:0px;" id="fwdPwr" width="450" height="25" data-val="0">No canvas</canvas>
-			<span style="position:absolute; top:30px; left:455px;" id="labelfwdPwr">---</span>
+		<h1>RAW-RX</h1>
+		<div id="rawRX" style="height: 200px; overflow-y: auto; border: 1px solid; font-family: monospace;"> </div>
+		<button id="commandAnnounce">announce</button><br>
 
-			<canvas style="position:absolute; top:60px; left:0px;" id="refPwr" width="450" height="25" data-val="0">No canvas</canvas>
-			<span style="position:absolute; top:60px; left:455px;" id="labelrefPwr">---</span>
+		<h1>Status</h1>
+		<div style="border: 1px solid; width: fit-content;">
+			<table>
+				<tr> <td>Uhrzeit:</td> <td><span id="statusTime"></span> <button id="statusSyncTime">sync</button> </td> </tr>
+			</table>
+		</div> <br>
 
-			<canvas style="position:absolute; top:90px; left:0px;" id="iD" width="450" height="25" data-val="0">No canvas</canvas>
-			<span style="position:absolute; top:90px; left:455px;" id="labeliD">---</span>
+		<h1>Einstellungen</h1>
+		<div style="border: 1px solid; width: fit-content;">
+			<table>
+				<tr> <td>Callsign</td> <td><input style="width: 200px;" id="settingsMycall"></td> </tr>
+				<tr> <td>NTP-Server</td> <td><input style="width: 200px;" id="settingsNTP"></td> </tr>
+				<tr> <td> Accesspoint </td>  <td> <input type='checkbox' id='settingsApMode'> </td>	</tr> 
+				<tr class="AP_MODE_ENABLED"> 
+					<td> SSID </td> 
+					<td> 
+						Networks:
+						<select id='settingsSSIDList' size='1'></select> 
+						<button id="settingsScanWifi">scan</button> <br>
+						SSID:
+						<input id='settingsSSID' style='width: 200px;'>
+					</td>
+				</tr>
+				<tr class="AP_MODE_ENABLED"> <td> Passwort </td> <td> <input id='settingsPassword' style='width: 200px;' > </td> 
+				</tr>
+				<tr class="AP_MODE_ENABLED"> <td> DHCP </td> <td> <input type='checkbox' id='settingsDHCP'> </td> </tr> 
+				<tr class="DHCP_ENABLED AP_MODE_ENABLED"> <td> IP-Adresse </td> <td> <input style='width: 100px;' id='settingsWiFiIP'> </td> </tr>
+				<tr class="DHCP_ENABLED AP_MODE_ENABLED"> <td> Subnetz </td> <td> <input style='width: 100px;' id='settingsWifiNetMask'> </td> </tr>
+				<tr class="DHCP_ENABLED AP_MODE_ENABLED"> <td> Gateway </td> <td> <input style='width: 100px;' id='settingsWifiGateway'> </td> </tr>
+				<tr class="DHCP_ENABLED AP_MODE_ENABLED"> <td> DNS </td> <td> <input style='width: 100px;' id='settingsWifiDNS'> </td> </tr>
 
-			<canvas style="position:absolute; top:120px; left:0px;" id="uB" width="450" height="25" data-val="0">No canvas</canvas>
-			<span style="position:absolute; top:120px; left:455px;" id="labeluB">---</span>
+				<tr> <td>Frequency</td> <td><input style="width: 200px;" id="settingsLoraFrequency"></td> </tr>
+				<tr> <td>Output Power</td> <td><input style="width: 200px;" id="settingsLoraOutputPower"></td> </tr>
+				<tr> <td>Bandwidth</td> <td>
+					<select id='settingsLoraBandwidth'>
+						<option value="31.25">31,25 kHz</option>	
+						<option value="62.5">62,5 kHz</option>	
+						<option value="125">125 kHz</option>	
+						<option value="250">250 kHz</option>	
+						<option value="500">500 kHz</option>	
+					</select> 
+				</td> </tr>
+				<tr> <td>Coding Rate</td> <td>
+					<select id='settingsLoraCodingRate'>
+						<option value="5">5 - Standard</option>	
+						<option value="6">6 - Erhöhter Schutz gegen Störungen</option>	
+						<option value="7">7 - Hoher Schutz, deutlich längere Sendezeit</option>	
+						<option value="8">8 - Maximaler Schutz</option>	
+					</select> 
+				</td> </tr>				
+				<tr> <td>Spreading Factor</td> <td>
+					<select id='settingsLoraSpreadingFactor'>
+						<option value="6">6 - Gering (Sichtverbindung)</option>	
+						<option value="7">7 - Gut (Standard)</option>	
+						<option value="8">8 - Besser</option>	
+						<option value="9">9 - Sehr gut</option>	
+						<option value="10">10 - Exzellent</option>	
+						<option value="11">11 - Maximum</option>	
+						<option value="12">12 - Maximum (Deep Indoor)</option>	
+					</select> 
+				</td> </tr>
+				<tr> <td>Sync Word</td> <td><input style="width: 200px;" id="settingsLoraSyncWord"></td> </tr>				
+			</table>
+			<button id="settingsSave">Save</button>
+			<button id="settingsReboot">Reboot</button> <br>
+		</div> <br>
 
-			<canvas style="position:absolute; top:150px; left:0px;" id="temp" width="450" height="25" data-val="0">No canvas</canvas>
-			<span style="position:absolute; top:150px; left:455px;" id="labeltemp">---</span>
-
-			
-			<label style="position:absolute; top:185px; left:10px;" class="led-checkbox-green"> <input type="checkbox" id="ein"> <span class="checkmark"></span><span class="checkbox-text">Ein</span></label>
-
-			<label style="position:absolute; top:205px; left:10px;" class="led-checkbox-green"> <input type="checkbox" id="qro"> <span class="checkmark"></span><span class="checkbox-text">QRO</span></label>
-
-			<label style="position:absolute; top:185px; left:70px;" class="led-checkbox-green"> <input type="checkbox" id="ptt"> <span class="checkmark"></span><span class="checkbox-text">PTT</span></label>
-
-			<label style="position:absolute; top:205px; left:70px;" class="led-checkbox-green"> <input type="checkbox" id="vv"> <span class="checkmark"></span><span class="checkbox-text">VV</span></label>
-			
-			<div style="position:absolute; top:185px; left:125px; width:365px; height:35px; display:inline-flex; align-items:center; justify-content:center; background-color: #888888;" id="fehlerfenster" >
-				<span id="fehler"></span>
-			</div>
-	
-		<script src="meter.js"></script>
-        <script>
-
-			var gateway = `ws://${window.location.hostname}/socket`;
-			//var gateway = "ws://10.10.254.199:81";
+		<script>
 			var websocket;
-  			var wifiRed = new Image();
-  			var wifiGreen = new Image();
-		
 			var timeout = 0;
-			
-			var fwdPwr = document.getElementById('fwdPwr');
-			meter(fwdPwr, {
-			  "textVal": "PWR fwd",
-			  "maxVal": 1500,
-			  "redVal": 1200,
-			  "yellowVal": 750,
-			  "unit": "W",
-			  "decimals": 1
-			});
-			
-			var refPwr = document.getElementById('refPwr');
-			meter(refPwr, {
-			  "textVal": "PWR ref",
-			  "maxVal": 150,
-			  "redVal": 120,
-			  "yellowVal": 75,
-			  "unit": "W",
-			  "decimals": 1
-			});
-
-			var iD = document.getElementById('iD');
-			meter(iD, {
-			  "textVal": "Id",
-			  "maxVal": 120,
-			  "redVal": 80,
-			  "yellowVal": 60,
-			  "unit": "A",
-			  "decimals": 10
-			});
-
-			var uB = document.getElementById('uB');
-			meter(uB, {
-			  "textVal": "uB",
-			  "maxVal": 40,
-			  "redVal": 999,
-			  "yellowVal": 999,
-			  "unit": "V",
-			  "decimals": 10
-			});
-
-			var temp = document.getElementById('temp');
-			meter(temp, {
-			  "textVal": "Temp",
-			  "maxVal": 70,
-			  "redVal": 60,
-			  "yellowVal": 45,
-			  "unit": "°C",
-			  "decimals": 10
-			});
 
 			document.addEventListener('DOMContentLoaded', function() {
 				//Verbinden
-				document.getElementById("ein").checked = false;
-				document.getElementById("qro").checked = false;
-				document.getElementById("vv").checked  = false;
-				document.getElementById("ptt").checked = false;
-		        wifiRed.src = "wifi_red.png";
-		        wifiGreen.src = "wifi_green.png";
-				
 				initWebSocket();
 			});
 
-			//Checkbox Click Disable
-			document.getElementById("ptt").onchange = function(evt) { this.checked = !this.checked;	};
+			document.getElementById("settingsSave").addEventListener("click", function() {
+				var settings = {};
+				settings["mycall"] = document.getElementById("settingsMycall").value;
+				settings["ntp"] = document.getElementById("settingsNTP").value;
+				settings["dhcpActive"] = document.getElementById("settingsDHCP").checked;
+				settings["wifiSSID"] = document.getElementById("settingsSSID").value;
+				settings["wifiPassword"] = document.getElementById("settingsPassword").value;
+				settings["apMode"] = document.getElementById("settingsApMode").checked;
+				settings["wifiIP"] = document.getElementById("settingsWiFiIP").value.split('.').map(Number);
+				settings["wifiNetMask"] = document.getElementById("settingsWifiNetMask").value.split('.').map(Number);
+				settings["wifiGateway"] = document.getElementById("settingsWifiGateway").value.split('.').map(Number);
+				settings["wifiDNS"] = document.getElementById("settingsWifiDNS").value.split('.').map(Number);
+				settings["loraFrequency"] = parseFloat(document.getElementById("settingsLoraFrequency").value);
+				settings["loraOutputPower"] = parseInt(document.getElementById("settingsLoraOutputPower").value);
+				settings["loraBandwidth"] = parseFloat(document.getElementById("settingsLoraBandwidth").value);
+				settings["loraSyncWord"] = parseInt(document.getElementById("settingsLoraSyncWord").value, 16);
+				settings["loraCodingRate"] = parseInt(document.getElementById("settingsLoraCodingRate").value);
+				settings["loraSpreadingFactor"] = parseInt(document.getElementById("settingsLoraSpreadingFactor").value);
 
-			document.getElementById("ein").onchange = function(evt) { 
-				//Befehl senden
-				txData = new Uint8Array(1);
-				if (this.checked) {txData[0] = 1;} else {txData[0] = 2;}
-				websocket.send(txData.buffer);
+				sendWS(JSON.stringify({settings: settings}));
+			});
 
-				//Direkte Änderung rückgänig
-				this.checked = !this.checked;
-			};
+			document.getElementById("settingsApMode").addEventListener("change", function() { settingsVisibility(); });
 
-			document.getElementById("qro").onchange = function(evt) { 
-				//Befehl senden
-				txData = new Uint8Array(1);
-				if (this.checked) {txData[0] = 3;} else {txData[0] = 4;}
-				websocket.send(txData.buffer);
+			document.getElementById("settingsDHCP").addEventListener("change", function() { settingsVisibility(); });
 
-				//Direkte Änderung rückgänig
-				this.checked = !this.checked;
-			};
+			
+			document.getElementById("commandAnnounce").addEventListener("click", function() {
+				sendWS(JSON.stringify({announce: true }));
+			});
 
-			document.getElementById("vv").onchange = function(evt) { 
-				//Befehl senden
-				txData = new Uint8Array(1);
-				if (this.checked) {txData[0] = 5;} else {txData[0] = 6;}
-				websocket.send(txData.buffer);
+			
+			document.getElementById("settingsReboot").addEventListener("click", function() {
+				sendWS(JSON.stringify({reboot: true }));
+			});
 
-				//Direkte Änderung rückgänig
-				this.checked = !this.checked;
-			};
+			document.getElementById("statusSyncTime").addEventListener("click", function() {
+				sendWS(JSON.stringify({time: Math.floor(Date.now() / 1000) }));
+			});
 
+			document.getElementById("settingsScanWifi").addEventListener("click", function() {
+				sendWS(JSON.stringify({scanWifi: true }));
+			});
+
+			document.getElementById("settingsSSIDList").addEventListener("click", function() {
+				document.getElementById("settingsSSID").value = document.getElementById("settingsSSIDList").value;
+			});
+
+			function onMessage(event) {
+				var d = JSON.parse(event.data);
+				if (d.time === undefined) {console.log("RX: " + event.data);}
+
+				//RAW-RX
+				if (d.monitor) {
+					var msg = "";
+					if (d.monitor.tx == true) {msg += "TX: ";} else {msg += "RX: ";}
+					msg += d.monitor.data.map(b => b.toString(16).padStart(2, '0')).join(' ').toUpperCase();
+					msg += " (RSSI:" + d.monitor.rssi + "dBm SNR:" + d.monitor.snr + "db)<br>";
+					if (d.monitor.tx == true) {msg += "TX: ";} else {msg += "RX: ";}
+
+					for (let i = 0; i < d.monitor.data.length; i++) {
+						msg += String.fromCharCode(d.monitor.data[i]);
+					}
+					document.getElementById("rawRX").innerHTML = document.getElementById("rawRX").innerHTML + "<br>" + msg;
+					document.getElementById('rawRX').scrollTop = document.getElementById("rawRX").scrollHeight;
+					
+				}
+
+				//Einstellungen
+				if (d.settings) {
+					document.getElementById("settingsMycall").value = d.settings.mycall;
+					document.getElementById("settingsNTP").value = d.settings.ntp;
+					document.getElementById("settingsSSID").value = d.settings.wifiSSID;
+					document.getElementById("settingsPassword").value = d.settings.wifiPassword;
+					document.getElementById("settingsWiFiIP").value = d.settings.wifiIP[0] + "." + d.settings.wifiIP[1] + "." + d.settings.wifiIP[2] + "." + d.settings.wifiIP[3];
+					document.getElementById("settingsWifiNetMask").value = d.settings.wifiNetMask[0] + "." + d.settings.wifiNetMask[1] + "." + d.settings.wifiNetMask[2] + "." + d.settings.wifiNetMask[3];
+					document.getElementById("settingsWifiGateway").value = d.settings.wifiGateway[0] + "." + d.settings.wifiGateway[1] + "." + d.settings.wifiGateway[2] + "." + d.settings.wifiGateway[3];
+					document.getElementById("settingsWifiDNS").value = d.settings.wifiDNS[0] + "." + d.settings.wifiDNS[1] + "." + d.settings.wifiDNS[2] + "." + d.settings.wifiDNS[3];
+					document.getElementById("settingsDHCP").checked = d.settings.dhcpActive; 
+					document.getElementById("settingsApMode").checked = d.settings.apMode; 
+					document.getElementById("settingsLoraFrequency").value = d.settings.loraFrequency; 
+					document.getElementById("settingsLoraOutputPower").value = d.settings.loraOutputPower; 
+					document.getElementById("settingsLoraBandwidth").value = d.settings.loraBandwidth; 
+					document.getElementById("settingsLoraSyncWord").value = d.settings.loraSyncWord.toString(16).padStart(2, '0').toUpperCase(); 
+					document.getElementById("settingsLoraCodingRate").value = d.settings.loraCodingRate; 
+					document.getElementById("settingsLoraSpreadingFactor").value = d.settings.loraSpreadingFactor; 
+					settingsVisibility();
+				}
+
+				//Uhrzeit
+				if (d.time) {
+					const date = new Date(d.time * 1000);
+					document.getElementById("statusTime").innerHTML = date.toLocaleString("de-DE");
+				}
+
+				//WiFi Scan
+				if (d.wifiScan) {
+					const select = document.getElementById('settingsSSIDList');
+					select.length = 0;
+					d.wifiScan.forEach(n => {
+						let opt = document.createElement('option');
+						opt.value = n.ssid;
+						opt.text = n.ssid + " (" + n.encryption + ", " + n.rssi +  "dBm)";
+						select.add(opt);
+					});
+				}
+
+
+			}		
+		
 			function keepAlive() { 
 				if (websocket.readyState == websocket.OPEN) {  
-					txData = new Uint8Array(1);
-					txData[0] = 0;
-					websocket.send(txData.buffer);
+					websocket.send(JSON.stringify({ping: new Date() }));
 				}  
 				timeout = setTimeout(keepAlive, 1000);  
 			}
 
 			function initWebSocket() {
-				fehler("Verbindung wird hergestellt...");
-				document.getElementById("wifiimage").src = wifiRed.src;
+				var gateway; 
+				if (window.location.hostname.length > 0) {
+					gateway = `ws://${window.location.hostname}/socket`;
+				} else {
+					gateway = "ws://192.168.33.66/socket";
+				}
 				websocket = new WebSocket(gateway);
-				websocket.binaryType = 'arraybuffer';
 				websocket.onopen = onOpen;
 				websocket.onclose = onClose;
 				websocket.onmessage = onMessage;
 			}
 
 			function onOpen(event) {
-				fehler("");
-				document.getElementById("wifiimage").src = wifiGreen.src;
-				fwdPwr.setAttribute('data-val', 0);
-				refPwr.setAttribute('data-val', 0);
-				iD.setAttribute('data-val', 0);
-				uB.setAttribute('data-val', 0);
-				temp.setAttribute('data-val', 0);
+				//sendWS(JSON.stringify({scanWifi: true }));
 				keepAlive();
 			}
 
 			function onClose(event) {
-				fehler("Verbindung getrennt!");
-				document.getElementById("wifiimage").src = wifiRed.src;
 				clearTimeout(timeout);
 				setTimeout(initWebSocket, 500);
 			}
 
-			// Function that receives the message from the ESP32 with the readings
-			function onMessage(event) {
-				var buffer = new Uint8Array(event.data);
-				//var fwdPwr = new DataView(new Uint8Array([buffer[5], buffer[4], buffer[3], buffer[2]]).buffer).getFloat32(0);
-				//var u2 = new DataView(new Uint8Array([buffer[7], buffer[6], buffer[5], buffer[4]]).buffer).getFloat32(0);
-				//var u3 = new DataView(new Uint8Array([buffer[11], buffer[10], buffer[9], buffer[8]]).buffer).getFloat32(0);
-				
-				//Status-Byte auswerten
-				document.getElementById("ein").checked = buffer[0] & 0b00000001;
-				document.getElementById("qro").checked = buffer[0] & 0b00000010;
-				document.getElementById("vv").checked  = buffer[0] & 0b00000100;
-				document.getElementById("ptt").checked = buffer[0] & 0b00001000;
-				
-				//Fehlermeldungen
-				switch(buffer[1]) {
-				  case 0: fehler(""); break;
-				  case 1: fehler("Betriebsspannung zu gering"); break;
-				  case 2: fehler("Betriebsspannung zu hoch"); break;
-				  case 3: fehler("Übertemperatur"); break;
-				  case 4: fehler("SWR zu hoch"); break;
-				  case 5: fehler("Strom zu hoch"); break;
-				  case 6: fehler("Ausgangsleistung zu hoch"); break;
-
-				  default: fehler("unbekannter Fehler. Code: " + buffer[1]); break;
-				} 
-				
-				fwdPwr.setAttribute('data-val', new DataView(new Uint8Array([buffer[5], buffer[4], buffer[3], buffer[2]]).buffer).getFloat32(0));
-				refPwr.setAttribute('data-val', new DataView(new Uint8Array([buffer[9], buffer[8], buffer[7], buffer[6]]).buffer).getFloat32(0));
-				iD.setAttribute('data-val', new DataView(new Uint8Array([buffer[13], buffer[12], buffer[11], buffer[10]]).buffer).getFloat32(0));
-				uB.setAttribute('data-val', new DataView(new Uint8Array([buffer[17], buffer[16], buffer[15], buffer[14]]).buffer).getFloat32(0));
-				temp.setAttribute('data-val', new DataView(new Uint8Array([buffer[21], buffer[20], buffer[19], buffer[18]]).buffer).getFloat32(0));
-			}		
-		
-			function fehler(msg) {
-				//Fehlermeldung anzeigen
-				if (msg == "") {
-					msg = "keine Fehler."
-					document.getElementById("fehlerfenster").style.background = "#888888";  
-					document.getElementById("fehler").style.fontWeight = "normal";
-				} else {
-					document.getElementById("fehlerfenster").style.background = "#FF2F1E";
-					document.getElementById("fehler").style.fontWeight = "bold";
-				}
-				document.getElementById("fehler").innerHTML	= msg;
+			function sendWS(text) {
+				websocket.send(text);
+				console.log("TX: " + text);
 			}
-		
-		
+
+			function settingsVisibility() {
+				if (document.getElementById("settingsApMode").checked) {
+					for (e of document.getElementsByClassName('DHCP_ENABLED')) {
+						e.style.display = "none";
+					}
+					for (e of document.getElementsByClassName('AP_MODE_ENABLED')) {
+						e.style.display = "none";
+					}				
+				} else {
+					for (e of document.getElementsByClassName('AP_MODE_ENABLED')) {
+						e.style.display = "";
+					}				
+					if (document.getElementById("settingsDHCP").checked) {
+						for (e of document.getElementsByClassName('DHCP_ENABLED')) {
+							e.style.display = "none";
+						}
+					} else {
+						for (e of document.getElementsByClassName('DHCP_ENABLED')) {
+							e.style.display = "";
+						}
+					}
+				}
+			}
+
+
 		</script>
-    </body>
+
+
+	</body>
+
+	
+
+
 </html>

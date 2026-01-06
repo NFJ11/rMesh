@@ -1,3 +1,76 @@
+#include "rf.h"
+#include "main.h"
+#include <RadioLib.h>
+#include "settings.h"
+
+SX1278 radio = new Module(LORA_NSS, LORA_DIO0, LORA_RST, LORA_DIO1);
+#if defined(ESP8266) || defined(ESP32)
+  ICACHE_RAM_ATTR
+#endif
+bool radioFlag;
+
+void setRadioflag(void) {
+    radioFlag = true;
+}
+
+void printState(int state) {
+    if (state == RADIOLIB_ERR_NONE) { Serial.printf("success! \n");} else {Serial.printf("FAILED! code %d\n", state);}
+}
+
+void initRadio() {
+    //Flags zurücksetzen
+    radioFlag = false;
+    int state;
+
+    //Init
+    Serial.print("[SX1278] Initializing... ");
+    printState(radio.begin());
+    Serial.printf("[SX1278] Set SyncWord to 0x%X ... ", settings.loraSyncWord);
+    printState(radio.setSyncWord(settings.loraSyncWord));
+    Serial.printf("[SX1278] Set Frequency to %f MHz... ", settings.loraFrequency);
+    printState(radio.setFrequency(settings.loraFrequency));
+    Serial.printf("[SX1278] Set Power to %d dBm ... ", settings.loraOutputPower);
+    printState(radio.setOutputPower(settings.loraOutputPower));
+    Serial.printf("[SX1278] Set Bandwidth to %f kHz... ", settings.loraBandwidth);
+    printState(radio.setBandwidth(settings.loraBandwidth));
+    Serial.printf("[SX1278] Set CodingRate to %d ... ", settings.loraCodingRate);
+    printState(radio.setCodingRate(settings.loraCodingRate));
+    Serial.printf("[SX1278] Set SpreadingFacr to %d ... ", settings.loraSpreadingFactor);
+    printState(radio.setSpreadingFactor(settings.loraSpreadingFactor));
+
+    //"Interrupts"
+    radio.setPacketReceivedAction(setRadioflag);
+    radio.setPacketSentAction(setRadioflag);
+
+    //RX
+    Serial.printf("[SX1278] Starting to listen ... ");
+    printState(radio.startReceive());
+
+}
+
+bool transmit(uint8_t* data, size_t len) {
+    // Prüfen, ob der Kanal frei ist (Channel Activity Detection - CAD)
+    if (radio.scanChannel() == RADIOLIB_LORA_DETECTED) {
+        //Kanal belegt
+        return false;
+    } else {
+        //Senden
+        radio.startTransmit(data, len);
+        //Daten über Websocket senden
+        JsonDocument doc;
+        for (int i = 0; i < len; i++) {
+          doc["monitor"]["data"][i] = data[i];
+        }
+        doc["monitor"]["tx"] = true;
+        doc["monitor"]["rssi"] = 0;
+        doc["monitor"]["snr"] = 0;
+        doc["monitor"]["frequencyError"] = 0;
+        String jsonOutput;
+        serializeJson(doc, jsonOutput);
+        ws.textAll(jsonOutput);
+    }
+    return true;
+}
 
 
 // // initialize SX1278 with default settings
@@ -12,10 +85,10 @@
 //     while (true) { delay(10); }
 //   }
 
-//   state = radio.setOutputPower(17);
-
+   
 
 //   state = radio.scanChannel();
+
 //   if (state == RADIOLIB_ERR_NONE) {
 //       Serial.println(F("Sendeleistung erfolgreich gesetzt!"));
 //   } else {

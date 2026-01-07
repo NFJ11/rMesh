@@ -76,8 +76,6 @@ void setup() {
   //Radio Init
   initRadio();
 
-
-
 }
 
 void loop() {
@@ -102,6 +100,7 @@ void loop() {
 			//Prüfen, ob Frame gesendet werden muss
 			if (millis() > txFrameBuffer[i].transmitMillis) {
 				//Frame senden
+				uint32_t a;
 				if (transmitFrame(txFrameBuffer[i])) {
 					//Erfolg
 					//Retrys runterzählen
@@ -110,6 +109,14 @@ void loop() {
 					txFrameBuffer[i].transmitMillis = millis() + TX_RETRY_TIME;
 					//Wenn kein Retry mehr übrig, dann löschen
 					if (txFrameBuffer[i].retry == 0) {
+						//Call, mit VIA_REPEAT in Peers auf nicht available setzen
+						if (txFrameBuffer[i].initRetry > 1) {
+							for (int ii = 0; ii < txFrameBuffer[i].viaCall.size(); ii++) {
+								if (txFrameBuffer[i].viaCall[ii].header == VIA_REPEAT) {
+									availablePeerList(txFrameBuffer[i].viaCall[ii].call, false);
+								}
+							}
+						}
 						txFrameBuffer.erase(txFrameBuffer.begin() + i);
 					}
 				} else {
@@ -120,48 +127,6 @@ void loop() {
 		}
 	}
 
-
-	// for (int i = 0; i < txFrameBuffer.size(); i++) {
-	//   //Prüfen, ob Frame gesendet werden muss
-	//   if (millis() > txFrameBuffer[i].transmitMillis) {
-	//     //ANNOUNCE UND ANNOUNCE_REPLY FRAMES
-	//     if ((txFrameBuffer[i].frameType == FrameType::ANNOUNCE) || (txFrameBuffer[i].frameType == FrameType::ANNOUNCE_REPLY) || (txFrameBuffer[i].frameType == FrameType::TUNE)) {
-	//       //Frame senden
-	//       if (transmitFrame(txFrameBuffer[i])) {
-	//         //Aus Liste löschen
-	//         txFrameBuffer.erase(txFrameBuffer.begin() + i);
-	//       }else {
-	//         //Nochmal versuchen
-	//         txFrameBuffer[i].transmitMillis = millis() + TX_BUSY_RETRY_TIME;
-	//       }
-	//     }
-	//   //MESSAGE-FRAMES 
-	//     if (txFrameBuffer[i].frameType == TEXT_MESSAGE) {
-	//       //Frame senden
-	//       if (transmitFrame(txFrameBuffer[i])) {
-	//         //Frame löschen, wenn keine VIA-R mehr dabei sind
-	//         bool repeat = false;
-	//         for (int ii = 0; ii < txFrameBuffer[i].viaCall.size(); ii++) {
-	//           if (txFrameBuffer[i].viaCall[ii].header == VIA_REPEAT) {repeat = true;}
-	//         }
-	//         if (repeat == false) {txFrameBuffer[i].retry = 0xFF;}
-	//         //Prüfen, ob Retrys ausgeschöpft sind
-	//         if (txFrameBuffer[i].retry < TX_RETRY) {
-	//           //Nochmal Senden
-	//           txFrameBuffer[i].retry ++;
-	//           txFrameBuffer[i].transmitMillis = millis() + TX_RETRY_TIME;
-	//         } else {
-	//           //Genug Retrys
-	//           txFrameBuffer.erase(txFrameBuffer.begin() + i);
-	//         }
-	//       } else {
-	//         //Nochmal versuchen
-	//         txFrameBuffer[i].transmitMillis = millis() + TX_BUSY_RETRY_TIME;
-	//       }
-	//     }
-	//   }
-	// }
-  //}
 
 	//Prüfen ob Änderungen vom HF-Chip vorliegen
 	if (radioFlag) {
@@ -200,53 +165,36 @@ void loop() {
 							//max. Länge prüfen
 							if (length > MAX_CALLSIGN_LENGTH) {length = MAX_CALLSIGN_LENGTH;}
 							//nicht außerhalb vom rxBuffer lesen
-							if ((i + 1 + length) <= rxSize) {
+							if ((i + length) < rxSize) {
 								//Schleife von aktueller Position + 1 bis "length"
-								for(int ii = i + 1; ii < i + 1 + length; ii++) {
+								for(int ii = i + 1; ii <= i + length; ii++) {
 									//Einzelne Bytes in String kopieren
 									rxFrame.srcCall.call += (char)rxBytes[ii]; 
 								}
 							}
 							//Zum nächsten Header springen (wenn Frame lange genug)
-							if ((i += length) <= rxSize) {i += length;}
+							if ((i + length) <= rxSize) {i += length;}
 							break;
 						case DST_CALL:
 							length = (rxBytes[i] & 0x0F);
 							//max. Länge prüfen
 							if (length > MAX_CALLSIGN_LENGTH) {length = MAX_CALLSIGN_LENGTH;}
 							//nicht außerhalb vom rxBuffer lesen
-							if ((i + 1 + length) <= rxSize) {
+							if ((i + length) < rxSize) {
 								//Schleife von aktueller Position + 1 bis "length"
-								for(int ii = i + 1; ii < i + 1 + length; ii++) {
+								for(int ii = i + 1; ii <= i + length; ii++) {
 									//Einzelne Bytes in String kopieren
 									rxFrame.dstCall.call += (char)rxBytes[ii]; 
 								}
 							}
 							//Zum nächsten Header springen (wenn Frame lange genug)
-							if ((i += length) <= rxSize) {i += length;}
+							if ((i + length) <= rxSize) {i += length;}
 							break;
 						case MESSAGE:
 							//Suche beenden
 							i = rxSize;
 					}
 				}
-
-				//Daten über Websocket senden
-				JsonDocument doc;
-				for (size_t i = 0; i < rxSize; i++) {
-					doc["monitor"]["data"][i] = rxBytes[i];
-				}
-				doc["monitor"]["tx"] = false;
-				doc["monitor"]["rssi"] = radio.getRSSI();
-				doc["monitor"]["snr"] = radio.getSNR();
-				doc["monitor"]["frequencyError"] = radio.getFrequencyError();
-				doc["monitor"]["time"] = time(NULL);
-				doc["monitor"]["srcCall"] = rxFrame.srcCall.call;
-				doc["monitor"]["dstCall"] = rxFrame.dstCall.call;
-				doc["monitor"]["frameType"] = rxFrame.frameType;
-				String jsonOutput;
-				serializeJson(doc, jsonOutput);
-				ws.textAll(jsonOutput);
 
 				//In Peer-Liste einfügen
 				Peer p;
@@ -261,6 +209,9 @@ void loop() {
 				if ((rxFrame.dstCall.call == String(settings.mycall)) && (rxFrame.frameType == ANNOUNCE_REPLY))  {
 					availablePeerList(rxFrame.srcCall.call, true);
 				}
+
+				//Frame an Monitor senden
+				monitorFrame(rxFrame);
 
 				//Frame Typ prüfen & Antwort basteln
 				Frame txFrame;

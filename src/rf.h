@@ -18,22 +18,23 @@ struct CallsignWithHeader {
 };
 
 struct Frame {
-    uint32_t transmitMillis;
+    uint32_t transmitMillis = 0;
     uint8_t frameType = 0x00;
     CallsignWithHeader srcCall;
     CallsignWithHeader dstCall;
     std::vector<CallsignWithHeader> viaCall;
     uint8_t retry = 1;
+    uint8_t initRetry = 1;
     char message[256];
     uint16_t messageLength = 0;
     uint32_t id = 0;
     uint8_t rawData[256];
-    uint16_t rawDataLength;
-    time_t time;
-    float rssi;
-    float snr;
-    float frqError;
-    bool tx;
+    uint16_t rawDataLength = 0;
+    time_t time = 0;
+    float rssi = 0;
+    float snr = 0;
+    float frqError = 0;
+    bool tx = false;
 };
 
 
@@ -69,6 +70,7 @@ void checkPeerList();
 bool transmitFrame(Frame &f);
 void sendMessage(String dstCall, String text);
 void availablePeerList(String call, bool available);
+void monitorFrame(Frame &f);
 
 
 

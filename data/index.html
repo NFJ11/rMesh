@@ -103,8 +103,8 @@
 				
 				
 			</table>
-			<button id="settingsSave">Save</button>
-			<button id="settingsReboot">Reboot</button> <br>
+			<button id="settingsSave">save & reboot</button>
+			<button id="settingsReboot">reboot</button> <br>
 		</div> <br>
 
 		<script>
@@ -185,97 +185,39 @@
 
 				//RAW-RX
 				if (d.monitor) {
+                    f = d.monitor;
 					var msg = "<br>";
 					//Bytes
-					if (d.monitor.tx == true) {msg += "TX: ";} else {msg += "RX: ";}
-					msg += d.monitor.data.map(b => b.toString(16).padStart(2, '0')).join(' ').toUpperCase();
-					msg += " (RSSI:" + d.monitor.rssi + "dBm SNR:" + d.monitor.snr + "db)";
-					document.getElementById("monitor").innerHTML = document.getElementById("monitor").innerHTML + "<br>" + msg;
+					if (f.tx == true) {msg += "TX: ";} else {msg += "RX: ";}
+					msg += f.rawData.map(b => b.toString(16).padStart(2, '0')).join(' ').toUpperCase();
+					msg += " (RSSI:" + f.rssi + "dBm SNR:" + f.snr + "db Retry:" + f.retry + "/" + f.initRetry + ")";
+                    msg += "<br>";
 
-					// //Text
-					// msg = "";
-					// if (d.monitor.tx == true) {msg += "TX: ";} else {msg += "RX: ";}
-					// for (let i = 0; i < d.monitor.data.length; i++) {
-					// 	msg += String.fromCharCode(d.monitor.data[i]);
-					// }
-					// document.getElementById("monitor").innerHTML = document.getElementById("monitor").innerHTML + "<br>" + msg;
-
-					//Decodiert
-					msg = "";
-					const rxTime = new Date(d.monitor.time * 1000);
-					msg += rxTime.toLocaleTimeString('de-DE') + " ";
-					if (d.monitor.tx == true) {msg += "TX: ";} else {msg += "RX: ";}
-					//Rufzeichen ausschneiden
-					var frame = d.monitor.data;
-					var srcCall;
-					var viaCall = [];
-					var dstCall;
-					var id = 0;
-					var message = "";
-					var via = "";
-					var messageFound = false;
-					const decoder = new TextDecoder();
-					//Frame druchlaufen
-					for (i=1; i < frame.length; i++) {
-						//Header prüfen
-						switch (frame[i] & 0xF0) {
-							case 0x00:	//SRC Call
-								if (!messageFound) {
-									var len = frame[i] & 0x0F;
-									var payload = frame.slice(i + 1, i + len + 1);
-									srcCall = decoder.decode(new Uint8Array(payload));
-									i += len;
-								}
-								break;
-							case 0x10:	//DST Call
-								if (!messageFound) {
-									var len = frame[i] & 0x0F;
-									var payload = frame.slice(i + 1, i + len + 1);
-									dstCall = decoder.decode(new Uint8Array(payload));
-									i += len;
-								}
-								break;
-							case 0x30:	//VIA_REPEAT
-								if (!messageFound) {
-									var len = frame[i] & 0x0F;
-									var payload = frame.slice(i + 1, i + len + 1);
-									via += " viaR <b>" + decoder.decode(new Uint8Array(payload)) + "</b>";
-									i += len;
-								}
-								break;
-							case 0x40:	//VIA_NO_REPEAT
-								if (!messageFound) {
-									var len = frame[i] & 0x0F;
-									var payload = frame.slice(i + 1, i + len + 1);
-									via += " via <b>" + decoder.decode(new Uint8Array(payload)) + "</b>";
-									i += len;
-								}
-								break;
-							case 0x20: //Message
-								messageFound = true;
-								id = (frame[i + 1] | (frame[i + 2] << 8) | (frame[i + 3] << 16) | (frame[i + 4] << 24)) >>> 0;
-								var payload = frame.slice(i + 5, frame.length + 1);
-								message = decoder.decode(new Uint8Array(payload));
-								//Abbruch
-								i = frame.length + 1;
-						}
-					}
-
-					console.log(via);
-
-					//Frame-Type
-					switch (frame[0]) {
-  						case 0x00: msg += "Announce from " + srcCall; break;
-  						case 0x01: msg += "Announce Reply from " + srcCall + " to " + dstCall; break;
-  						case 0x02: msg += "Tuning Frame from " + srcCall; break;
+                    //Lesbar anzeigen
+					switch (f.frameType) {
+  						case 0x00: msg += "Announce from <b>" + f.srcCall + "</b>"; break;
+  						case 0x01: msg += "Announce Reply from <b>" + f.srcCall + "</b> to <b>" + f.dstCall + "</b>"; break;
+  						case 0x02: msg += "Tuning Frame from " + f.srcCall; break;
   						case 0x03: 
-							msg += "Message from <b>" + srcCall + "</b> to <b>" + dstCall + "</b>";
-							if (via.length > 0) {msg += via;}
-							msg += " id <b>" + id + "</b>: <b>" + message + "</b>"; break;
+                            if (f.dstCall.length == 0) {f.dstCall = "*ALL*";}
+							msg += "Message from <b>" + f.srcCall + "</b> to <b>" + f.dstCall + "</b>";
+                            //VIA Calls
+                            f.via.forEach((v) => {
+                                if (v.header == 0x03) {msg += " viaR ";}
+                                if (v.header == 0x04) {msg += " via ";}
+                                msg += "<b>" + v.call + "</b>";
+                            });
+                            //ID
+							msg += " id <b>" + f.id + "</b>: <b>";
+                            //Text
+                            for (let i = 0; i < f.message.length; i++) {
+                                msg += String.fromCharCode(f.message[i]);
+                            }
+                            msg += "</b>"; break;
 					}
 					document.getElementById("monitor").innerHTML = document.getElementById("monitor").innerHTML + "<br>" + msg;
 					document.getElementById('monitor').scrollTop = document.getElementById("monitor").scrollHeight;
-					
+				
 				}
 
 				//Peers

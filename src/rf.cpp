@@ -75,73 +75,114 @@ bool transmitRAW(uint8_t* data, size_t len) {
         //Senden
         transmittingFlag = true;
         radio.startTransmit(data, len);
-        //Daten über Websocket senden
-        JsonDocument doc;
-        for (int i = 0; i < len; i++) {
-          doc["monitor"]["data"][i] = data[i];
-        }
-        doc["monitor"]["tx"] = true;
-        doc["monitor"]["rssi"] = 0;
-        doc["monitor"]["snr"] = 0;
-        doc["monitor"]["frequencyError"] = 0;
-        doc["monitor"]["time"] = time(NULL);
-        String jsonOutput;
-        serializeJson(doc, jsonOutput);
-        ws.textAll(jsonOutput);
+
+        // //Daten über Websocket senden
+        // JsonDocument doc;
+        // for (int i = 0; i < len; i++) {
+        //   doc["monitor"]["data"][i] = data[i];
+        // }
+        // doc["monitor"]["tx"] = true;
+        // doc["monitor"]["rssi"] = 0;
+        // doc["monitor"]["snr"] = 0;
+        // doc["monitor"]["frequencyError"] = 0;
+        // doc["monitor"]["time"] = time(NULL);
+        // String jsonOutput;
+        // serializeJson(doc, jsonOutput);
+        // ws.textAll(jsonOutput);
     }
     return true;
 }
 
 
+void monitorFrame(Frame &f) {
+    //Frame über Websocket senden
+    JsonDocument doc;
+    for (uint16_t i = 0; i < f.rawDataLength; i++) {
+        doc["monitor"]["rawData"][i] = f.rawData[i];
+    }
+    for (uint16_t i = 0; i < f.messageLength; i++) {
+        doc["monitor"]["message"][i] = static_cast<uint8_t>(f.message[i]);
+    }    
+    doc["monitor"]["tx"] = false;
+    doc["monitor"]["rssi"] = radio.getRSSI();
+    doc["monitor"]["snr"] = radio.getSNR();
+    doc["monitor"]["frequencyError"] = radio.getFrequencyError();
+    doc["monitor"]["time"] = f.time;
+    doc["monitor"]["srcCall"] = f.srcCall.call;
+    doc["monitor"]["srcCallHeader"] = f.srcCall.header;
+    doc["monitor"]["dstCall"] = f.dstCall.call;
+    doc["monitor"]["dstCallHeader"] = f.dstCall.header;
+    doc["monitor"]["frameType"] = f.frameType;
+    doc["monitor"]["id"] = f.id;
+    doc["monitor"]["initRetry"] = f.initRetry;
+    doc["monitor"]["retry"] = f.retry;
+    //VIAs
+    for (int i = 0; i < f.viaCall.size(); i++) {
+        Serial.printf("Call %s\n", f.viaCall[i].call );
+        doc["monitor"]["via"][i]["call"] = f.viaCall[i].call;
+        doc["monitor"]["via"][i]["header"] = f.viaCall[i].header;
+    }    
+    String jsonOutput;
+    serializeJson(doc, jsonOutput);
+    ws.textAll(jsonOutput);
+}
+
+
 bool transmitFrame(Frame &f) {
     //Binärdaten zusammenbauen und senden
-    uint8_t txBuffer[256];
-    uint8_t txBufferLength = 0;
+    f.rawDataLength = 0;
     //Frame-Typ
-    txBuffer[txBufferLength] = f.frameType; 
-    txBufferLength ++;
+    f.rawData[f.rawDataLength] = f.frameType; 
+    f.rawDataLength ++;
     //Absender
-    txBuffer[txBufferLength] = SRC_CALL << 4 | (0x0F & strlen(settings.mycall));  //Header Absender
-    txBufferLength ++;
-    memcpy(&txBuffer[txBufferLength], &settings.mycall[0], strlen(settings.mycall)); //Payload
-    txBufferLength += strlen(settings.mycall);
+    f.rawData[f.rawDataLength] = SRC_CALL << 4 | (0x0F & strlen(settings.mycall));  //Header Absender
+    f.rawDataLength ++;
+    memcpy(&f.rawData[f.rawDataLength], &settings.mycall[0], strlen(settings.mycall)); //Payload
+    f.rawDataLength += strlen(settings.mycall);
     //VIAs hinzu
     for (int i = 0; i < f.viaCall.size(); i++) {
-        txBuffer[txBufferLength] = f.viaCall[i].header << 4 | (0x0F & f.viaCall[i].call.length() );  //Header Absender
-        txBufferLength ++;
-        memcpy(&txBuffer[txBufferLength], &f.viaCall[i].call[0], f.viaCall[i].call.length()); //Payload
-        txBufferLength += f.viaCall[i].call.length();
+        f.rawData[f.rawDataLength] = f.viaCall[i].header << 4 | (0x0F & f.viaCall[i].call.length() );  //Header Absender
+        f.rawDataLength ++;
+        memcpy(&f.rawData[f.rawDataLength], &f.viaCall[i].call[0], f.viaCall[i].call.length()); //Payload
+        f.rawDataLength += f.viaCall[i].call.length();
     }
     //Empfänger hinzu
     if (f.dstCall.call.length() > 0) {
-        txBuffer[txBufferLength] = DST_CALL << 4 | (0x0F & f.dstCall.call.length());  //Header Absender
-        txBufferLength ++;
-        memcpy(&txBuffer[txBufferLength], &f.dstCall.call[0], f.dstCall.call.length()); //Payload
-        txBufferLength += f.dstCall.call.length();
+        f.rawData[f.rawDataLength] = DST_CALL << 4 | (0x0F & f.dstCall.call.length());  //Header Absender
+        f.rawDataLength ++;
+        memcpy(&f.rawData[f.rawDataLength], &f.dstCall.call[0], f.dstCall.call.length()); //Payload
+        f.rawDataLength += f.dstCall.call.length();
     }
-    //Message hinuz (muss ganz hinten sein)
+    //Message hinzu (muss ganz hinten sein)
     if (f.messageLength > 0) {
         //TYP
-        txBuffer[txBufferLength] = MESSAGE << 4;  //Header TEXT_MESSAGE
-        txBufferLength ++;
+        f.rawData[f.rawDataLength] = MESSAGE << 4;  //Header TEXT_MESSAGE
+        f.rawDataLength ++;
         //ID
-        memcpy(&txBuffer[txBufferLength], &f.id, sizeof(f.id)); //Payload
-        txBufferLength += sizeof(f.id);
+        memcpy(&f.rawData[f.rawDataLength], &f.id, sizeof(f.id)); //Payload
+        f.rawDataLength += sizeof(f.id);
         //Message
-        memcpy(&txBuffer[txBufferLength], &f.message[0], f.messageLength); //Payload
-        txBufferLength += f.messageLength;
+        memcpy(&f.rawData[f.rawDataLength], &f.message[0], f.messageLength); //Payload
+        f.rawDataLength += f.messageLength;
     }
-
     //Bei Frametype TUNE einfach Frame mit 0xFF auffüllen
     if (f.frameType == TUNE) {
-        while (txBufferLength < 255) {
-            txBuffer[txBufferLength] = 0xFF;
-            txBufferLength ++;
+        while (f.rawDataLength < 255) {
+            f.rawData[f.rawDataLength] = 0xFF;
+            f.rawDataLength ++;
         }
     }
 
+    //Frame anpassen
+    f.time = time(NULL);
+    f.tx = true;
+    f.srcCall.call = settings.mycall;
+    f.srcCall.header = SRC_CALL;
+    f.dstCall.header = DST_CALL;
+
     //Senden
-    return transmitRAW(txBuffer, txBufferLength);
+    monitorFrame(f);
+    return transmitRAW(f.rawData, f.rawDataLength);
 }
 
 void sendMessage(String dstCall, String text) {
@@ -152,6 +193,7 @@ void sendMessage(String dstCall, String text) {
     text.toCharArray(f.message, 255);
     f.messageLength = text.length();
     f.retry = TX_RETRY;
+    f.initRetry = f.retry;
     f.id = millis();
     f.transmitMillis = 0;
     //VIA-Calls dazu

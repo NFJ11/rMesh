@@ -25,7 +25,7 @@ struct Frame {
     std::vector<CallsignWithHeader> viaCall;
     uint8_t retry = 1;
     uint8_t initRetry = 1;
-    char message[256];
+    uint8_t message[256];
     uint16_t messageLength = 0;
     uint32_t id = 0;
     uint8_t rawData[256];
@@ -62,7 +62,6 @@ extern std::vector<Peer> peerList;
 extern std::vector<Frame> txFrameBuffer;
 
 void initRadio();
-bool transmitRAW(uint8_t*, size_t);
 void addSourceCall(uint8_t* data, uint8_t &len);
 void sendPeerList();
 void addPeerList(Peer p);

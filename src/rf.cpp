@@ -101,20 +101,20 @@ bool transmitFrame(Frame &f) {
     txBuffer[txBufferLength] = f.frameType; 
     txBufferLength ++;
     //Absender
-    txBuffer[txBufferLength] = HeaderType::SRC_CALL | (0x0F & strlen(settings.mycall));  //Header Absender
+    txBuffer[txBufferLength] = SRC_CALL << 4 | (0x0F & strlen(settings.mycall));  //Header Absender
     txBufferLength ++;
     memcpy(&txBuffer[txBufferLength], &settings.mycall[0], strlen(settings.mycall)); //Payload
     txBufferLength += strlen(settings.mycall);
     //VIAs hinzu
     for (int i = 0; i < f.viaCall.size(); i++) {
-        txBuffer[txBufferLength] = f.viaCall[i].header | (0x0F & f.viaCall[i].call.length() );  //Header Absender
+        txBuffer[txBufferLength] = f.viaCall[i].header << 4 | (0x0F & f.viaCall[i].call.length() );  //Header Absender
         txBufferLength ++;
         memcpy(&txBuffer[txBufferLength], &f.viaCall[i].call[0], f.viaCall[i].call.length()); //Payload
         txBufferLength += f.viaCall[i].call.length();
     }
     //Empfänger hinzu
     if (f.dstCall.call.length() > 0) {
-        txBuffer[txBufferLength] = HeaderType::DST_CALL | (0x0F & f.dstCall.call.length());  //Header Absender
+        txBuffer[txBufferLength] = DST_CALL << 4 | (0x0F & f.dstCall.call.length());  //Header Absender
         txBufferLength ++;
         memcpy(&txBuffer[txBufferLength], &f.dstCall.call[0], f.dstCall.call.length()); //Payload
         txBufferLength += f.dstCall.call.length();
@@ -122,7 +122,7 @@ bool transmitFrame(Frame &f) {
     //Message hinuz (muss ganz hinten sein)
     if (f.messageLength > 0) {
         //TYP
-        txBuffer[txBufferLength] = HeaderType::MESSAGE;  //Header TEXT_MESSAGE
+        txBuffer[txBufferLength] = MESSAGE << 4;  //Header TEXT_MESSAGE
         txBufferLength ++;
         //ID
         memcpy(&txBuffer[txBufferLength], &f.id, sizeof(f.id)); //Payload
@@ -133,7 +133,7 @@ bool transmitFrame(Frame &f) {
     }
 
     //Bei Frametype TUNE einfach Frame mit 0xFF auffüllen
-    if (f.frameType == FrameType::TUNE) {
+    if (f.frameType == TUNE) {
         while (txBufferLength < 255) {
             txBuffer[txBufferLength] = 0xFF;
             txBufferLength ++;
@@ -151,7 +151,7 @@ void sendMessage(String dstCall, String text) {
     f.dstCall.call = dstCall;
     text.toCharArray(f.message, 255);
     f.messageLength = text.length();
-    f.retry = 0;
+    f.retry = TX_RETRY;
     f.id = millis();
     f.transmitMillis = 0;
     //VIA-Calls dazu
@@ -193,18 +193,27 @@ void addPeerList(Peer p) {
         //Serial.printf("Add Peer List %i %s %s\n", i, peerList[i].call, p.call);
         if (peerList[i].call == p.call) {
             add = false;
-            if (peerList[i].available == true) {
-                peerList[i] = p;
-                peerList[i].available = true;
-            } else {
-                peerList[i] = p;
-            }
+            //Peer-List updaten bis auf Available Flag
+            bool availableOld = peerList[i].available;
+            peerList[i] = p;
+            peerList[i].available = availableOld;
             break;
         }
     }    
-    //Nicht grunfen -> hinzufügen
+    //Nicht grunfen -> hinzufügen (immer ohne Available Flag )
     if (add) {
+        p.available = false;
         peerList.push_back(p);
+    }
+    sendPeerList();
+}
+
+void availablePeerList(String call, bool available) {
+    //Available Flag in Peer-Liste setzen
+    for (int i = 0; i < peerList.size(); i++) {
+        if (peerList[i].call == call) {
+            peerList[i].available = available;
+        }
     }
     sendPeerList();
 }

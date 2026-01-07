@@ -4,6 +4,7 @@
 #include "settings.h"
 #include <ArduinoJson.h>
 #include "wifiFunctions.h"
+#include "main.h"
 
 
 Settings settings;
@@ -118,6 +119,8 @@ void sendSettings() {
     doc["settings"]["loraCodingRate"] = settings.loraCodingRate;
     doc["settings"]["loraSpreadingFactor"] = settings.loraSpreadingFactor;
     doc["settings"]["loraPreambleLength"] = settings.loraPreambleLength;
+    doc["settings"]["version"] = VERSION;
+    doc["settings"]["name"] = NAME;
 
 
   String jsonOutput;

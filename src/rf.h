@@ -20,22 +20,20 @@ struct CallsignWithHeader {
 struct Frame {
     uint32_t transmitMillis;
     uint8_t frameType = 0x00;
-    //String srcCall = "";
-    //uint8_t srcHeader;
-	
     CallsignWithHeader srcCall;
     CallsignWithHeader dstCall;
     std::vector<CallsignWithHeader> viaCall;
-
-    //String dstCall = "";
-    //uint8_t dstHeader;
-    
-    //std::vector<String> viaCall;
-    //std::vector<uint8_t> viaHeader;
-    uint8_t retry = 0;
+    uint8_t retry = 1;
     char message[256];
-    uint8_t messageLength = 0;
+    uint16_t messageLength = 0;
     uint32_t id = 0;
+    uint8_t rawData[256];
+    uint16_t rawDataLength;
+    time_t time;
+    float rssi;
+    float snr;
+    float frqError;
+    bool tx;
 };
 
 
@@ -48,11 +46,12 @@ enum FrameType {
 };
 
 enum HeaderType {
-    SRC_CALL = 0x00,  
-    DST_CALL = 0x10,
-    MESSAGE = 0x20,
-    VIA_REPEAT = 0x30,
-    VIA_NO_REPEAT = 0x40
+    //Obere 4 Bits vom Header-Byte -> 0x00 bis 0x0F
+    SRC_CALL = 0x0,  
+    DST_CALL = 0x1,
+    MESSAGE = 0x2,
+    VIA_REPEAT = 0x3,
+    VIA_NO_REPEAT = 0x4
 };
 
 extern bool transmittingFlag;
@@ -69,6 +68,7 @@ void addPeerList(Peer p);
 void checkPeerList();
 bool transmitFrame(Frame &f);
 void sendMessage(String dstCall, String text);
+void availablePeerList(String call, bool available);
 
 
 

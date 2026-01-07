@@ -319,7 +319,7 @@
 					document.getElementById("settingsLoraCodingRate").value = d.settings.loraCodingRate; 
 					document.getElementById("settingsLoraSpreadingFactor").value = d.settings.loraSpreadingFactor; 
 					document.getElementById("settingsLoraPreambleLength").value = d.settings.loraPreambleLength; 
-					
+					document.title = d.settings.name + " " + d.settings.version;
 					settingsVisibility();
 				}
 

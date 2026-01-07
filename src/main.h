@@ -17,5 +17,10 @@
 #define TX_RETRY 5                              //Retrys beim Senden 
 #define TX_RETRY_TIME 1000 + random(0, 1000)    //Pause zwischen wiederholungen
 
+//Interner Quatsch
+#define NAME "rMesh"                        //Versions-String
+#define VERSION "V0.1"                        //Versions-String
+#define MAX_CALLSIGN_LENGTH 15                  //maximale Länge des Rufzeichens
+
 
 #endif

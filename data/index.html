@@ -212,10 +212,12 @@
                             //ID
 							msg += " id <b>" + f.id + "</b>: <b>";
                             //Text
-                            for (let i = 0; i < f.message.length; i++) {
-                                msg += String.fromCharCode(f.message[i]);
+                            if (f.message) {
+                                for (let i = 0; i < f.message.length; i++) {
+                                    msg += String.fromCharCode(f.message[i]);
+                                }
+                                msg += "</b>"; break;
                             }
-                            msg += "</b>"; break;
 					}
 					document.getElementById("monitor").innerHTML = document.getElementById("monitor").innerHTML + "<br>" + msg;
 					document.getElementById('monitor').scrollTop = document.getElementById("monitor").scrollHeight;

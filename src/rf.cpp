@@ -205,6 +205,8 @@ void sendMessage(String dstCall, String text) {
             f.viaCall.push_back(c);
         }
     } 
+    //Kein RETRY, wenn keine VIAs
+    if (f.viaCall.size() == 0) {f.retry = 1; f.initRetry = 1;}
     //Frame in Sendebuffer
     txFrameBuffer.push_back(f);
 }

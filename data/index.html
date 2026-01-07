@@ -202,11 +202,13 @@
                             if (f.dstCall.length == 0) {f.dstCall = "*ALL*";}
 							msg += "Message from <b>" + f.srcCall + "</b> to <b>" + f.dstCall + "</b>";
                             //VIA Calls
-                            f.via.forEach((v) => {
-                                if (v.header == 0x03) {msg += " viaR ";}
-                                if (v.header == 0x04) {msg += " via ";}
-                                msg += "<b>" + v.call + "</b>";
-                            });
+                            if (f.via) {
+                                f.via.forEach((v) => {
+                                    if (v.header == 0x03) {msg += " viaR ";}
+                                    if (v.header == 0x04) {msg += " via ";}
+                                    msg += "<b>" + v.call + "</b>";
+                                });
+                            }
                             //ID
 							msg += " id <b>" + f.id + "</b>: <b>";
                             //Text

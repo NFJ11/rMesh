@@ -12,7 +12,7 @@ Settings settings;
 void defaultSettings() {
     //Standart Einstellungen
     Serial.println("Lade Default-Settings");
-    String("MOD2").toCharArray(settings.mycall, 8);
+    String("BBB").toCharArray(settings.mycall, 8);
     String("NFJ-Lan BB").toCharArray(settings.wifiSSID, 64);
     String("438.725db0kch").toCharArray(settings.wifiPassword, 64);
     String("de.pool.ntp.org").toCharArray(settings.ntpServer, 64);
@@ -22,7 +22,7 @@ void defaultSettings() {
     settings.wifiNetMask = IPAddress(255,255,255,0);
     settings.wifiGateway = IPAddress(192,168,33,4);
     settings.wifiDNS = IPAddress(192,168,33,4);
-    settings.loraFrequency = 434.9375;
+    settings.loraFrequency = 434.950;
     settings.loraOutputPower = 20;
     settings.loraBandwidth = 250;
     settings.loraSyncWord = 0x2b;

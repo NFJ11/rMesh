@@ -218,11 +218,18 @@
                                 }
                                 msg += "</b>"; break;
                             }
+                        case 0x04: msg += "Message Reply from <b>" + f.srcCall + "</b> to <b>" + f.dstCall + "</b> id: <b>" + f.id + "</b>"; break;                            
 					}
 					document.getElementById("monitor").innerHTML = document.getElementById("monitor").innerHTML + "<br>" + msg;
 					document.getElementById('monitor').scrollTop = document.getElementById("monitor").scrollHeight;
 				
 				}
+
+                //Message empfangen
+                if (d.message) {
+                    var msg = "RX from " + d.message.srcCall + " to " + d.message.dstCall + ": " + d.message.message;
+                    document.getElementById("messages").innerHTML = document.getElementById("messages").innerHTML + "<br>" + msg;                     
+                }
 
 				//Peers
 				if (d.peerlist) {

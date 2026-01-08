@@ -58,11 +58,11 @@ void initRadio() {
     printState(radio.startReceive());
 
     //Test PEER eintragen
-    Peer p;
-    p.lastRX = 0xFFFFFFFF;
-    p.call = "NONE";
-    p.available = true;
-    peerList.push_back(p);
+    // Peer p;
+    // p.lastRX = 0xFFFFFFFF;
+    // p.call = "NONE";
+    // p.available = true;
+    // peerList.push_back(p);
 
 }
 

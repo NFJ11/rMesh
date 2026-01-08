@@ -43,7 +43,8 @@ enum FrameType {
     ANNOUNCE,  
     ANNOUNCE_REPLY,
     TUNE,
-    TEXT_MESSAGE
+    TEXT_MESSAGE,
+    MESSAGE_REPLY
 };
 
 enum HeaderType {
@@ -52,7 +53,8 @@ enum HeaderType {
     DST_CALL = 0x1,
     MESSAGE = 0x2,
     VIA_REPEAT = 0x3,
-    VIA_NO_REPEAT = 0x4
+    VIA_NO_REPEAT = 0x4,
+    NODE_CALL = 0x5
 };
 
 extern bool transmittingFlag;

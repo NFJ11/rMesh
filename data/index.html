@@ -37,6 +37,7 @@
 				<div style="border: 1px solid; width: fit-content;">
 					<table>
 						<tr> <td>Uhrzeit:</td> <td><span id="statusTime"></span> <button id="statusSyncTime">sync</button> </td> </tr>
+						<tr> <td>RX:</td> <td><span id="statusRX"></span> </td> </tr>
 						<tr> <td>TX:</td> <td><span id="statusTX"></span> </td> </tr>
 						<tr> <td>TX Buffer Count:</td> <td><span id="statusTxBufferCount"></span> </td> </tr>
 					</table>
@@ -296,7 +297,24 @@
                 if (d.status) {
                     const date = new Date(d.status.time * 1000);
                     document.getElementById("statusTime").innerHTML = date.toLocaleString("de-DE");
-                    document.getElementById("statusTX").innerHTML = d.status.tx; 
+                    if (d.status.rx) {
+                        document.getElementById("statusRX").innerHTML = d.status.rx; 
+                        document.getElementById("statusRX").style.color = "#006400";
+                        document.getElementById("statusRX").style.fontWeight = "bold";
+                    } else {
+                        document.getElementById("statusRX").innerHTML = d.status.rx; 
+                        document.getElementById("statusRX").style.color = "";
+                        document.getElementById("statusRX").style.fontWeight = "";
+                    }
+                    if (d.status.tx) {
+                        document.getElementById("statusTX").innerHTML = d.status.tx; 
+                        document.getElementById("statusTX").style.color = "red";
+                        document.getElementById("statusTX").style.fontWeight = "bold";
+                    } else {
+                        document.getElementById("statusTX").innerHTML = d.status.tx; 
+                        document.getElementById("statusTX").style.color = "";
+                        document.getElementById("statusTX").style.fontWeight = "";
+                    }
                     document.getElementById("statusTxBufferCount").innerHTML = d.status.txBufferCount; 
 
                 }
@@ -329,19 +347,20 @@
 
 			function initWebSocket() {
 				//messages.json laden und parsen
-					fetch("messages.json")
-						.then(response => response.text())
-						.then(text => {
-							const lines = text.split(/\r?\n/);
-							lines.forEach(line => {
-                                if (line.trim().length === 0) return;
-                                console.log("FILE: " + line);
-								const m = JSON.parse(line);
-								showMessage(m.message);
-						});
-                        document.getElementById("messages").innerHTML = document.getElementById("messages").innerHTML + "<hr>";                     
-                        document.getElementById('messages').scrollTop = document.getElementById("messages").scrollHeight;	
-					});				
+                document.getElementById("messages").innerHTML = document.getElementById("messages").innerHTML = "";
+                fetch("messages.json")
+                    .then(response => response.text())
+                    .then(text => {
+                        const lines = text.split(/\r?\n/);
+                        lines.forEach(line => {
+                            if (line.trim().length === 0) return;
+                            console.log("FILE: " + line);
+                            const m = JSON.parse(line);
+                            showMessage(m.message);
+                    });
+                    document.getElementById("messages").innerHTML = document.getElementById("messages").innerHTML + "<hr>";                     
+                    document.getElementById('messages').scrollTop = document.getElementById("messages").scrollHeight;	
+                });				
 
 				var gateway; 
 				if (window.location.hostname.length > 0) {

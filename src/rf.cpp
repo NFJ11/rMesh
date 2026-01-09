@@ -11,6 +11,8 @@ SX1278 radio = new Module(LORA_NSS, LORA_DIO0, LORA_RST, LORA_DIO1);
 #endif
 bool radioFlag = false;
 bool transmittingFlag = false;
+bool receivingFlag = false;
+
 
 std::vector<Peer> peerList;
 std::vector<Frame> txFrameBuffer;
@@ -149,7 +151,7 @@ bool transmitFrame(Frame &f) {
     }
     //Bei Frametype TUNE einfach Frame mit 0xFF auffüllen
     if (f.frameType == TUNE) {
-        while (f.rawDataLength < 255) {
+        while (f.rawDataLength < 254) {
             f.rawData[f.rawDataLength] = 0xFF;
             f.rawDataLength ++;
         }
@@ -166,18 +168,13 @@ bool transmitFrame(Frame &f) {
     f.snr = 0;
     f.frqError = 0;
 
-    // Prüfen, ob der Kanal frei ist (Channel Activity Detection - CAD)
-    if (radio.scanChannel() == RADIOLIB_LORA_DETECTED) {
-        //Kanal belegt
-        return false;
-    } else {
-        //Senden
-        transmittingFlag = true;
-        statusTimer = 0;
-        radio.startTransmit(f.rawData, f.rawDataLength);
-        //Monitor
-        monitorFrame(f);
-    }
+    //Senden
+    transmittingFlag = true;
+    statusTimer = 0;
+    radio.startTransmit(f.rawData, f.rawDataLength);
+    //Monitor
+    monitorFrame(f);
+
     return true;
 }
 

@@ -22,8 +22,9 @@ const char* TZ_INFO = "CET-1CEST,M3.5.0,M10.5.0/3";
 
 //Timing
 uint32_t statusTimer = millis();
+uint32_t scanChannelTimer = 0;
 uint32_t rebootTimer = 0xFFFFFFFF;
-uint32_t txPauseTimer = 0;
+uint32_t channelFreeTimer = 0;
 
 
 
@@ -114,7 +115,11 @@ void setup() {
  
 }
 
+
+
+
 void loop() {
+
 	//WiFi Status anzeigen (LED)
 	showWiFiStatus();  
 
@@ -128,9 +133,22 @@ void loop() {
 		//Frame in SendeBuffer
 		txFrameBuffer.push_back(f);
 	}
-  
+
+    //Prüfen ob Kanal belegt
+    if ((millis() > scanChannelTimer) && (transmittingFlag == false)) {
+        scanChannelTimer = millis() + 100;
+        if (radio.getIRQFlags() && 0x10) {
+            receivingFlag = true;
+            statusTimer = 0;
+            channelFreeTimer = millis() + CHANNEL_FREE_TIME;
+        } else {
+            receivingFlag = false;
+            statusTimer = 0;
+        }
+    }
+
 	//Prüfen, ob was gesendet werden muss
-	if ((transmittingFlag == false) && (millis() > txPauseTimer)) {
+	if ((transmittingFlag == false) && (millis() > channelFreeTimer)) {
 		//Sendepuffer duchlaufen
 		//for (int i = 0; i < txFrameBuffer.size(); i++) {
         if (txFrameBuffer.size() > 0) {
@@ -168,8 +186,8 @@ void loop() {
 		radioFlag = false;
 		//"Echte" Flags auslesen
 		uint16_t irqFlags = radio.getIRQFlags();
-		
-		//Daten Empfangen
+
+        //Daten Empfangen
 		if (irqFlags == 0x50) {
 			//Prüfen, ob was empfangen wurde
 			Frame rxFrame;
@@ -340,7 +358,7 @@ void loop() {
 		if (irqFlags == 0x08) {
 			transmittingFlag = false;
             statusTimer = 0;
-            txPauseTimer = millis() + TX_PAUSE_TIME;
+            channelFreeTimer = millis() + CHANNEL_FREE_TIME;
 			radio.startReceive();
 		}
 	}
@@ -354,6 +372,7 @@ void loop() {
 	JsonDocument doc;
 	doc["status"]["time"] = time(NULL);
 	doc["status"]["tx"] = transmittingFlag;
+	doc["status"]["rx"] = receivingFlag;
 	doc["status"]["txBufferCount"] = txFrameBuffer.size();
 	String jsonOutput;
 	serializeJson(doc, jsonOutput);

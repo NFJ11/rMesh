@@ -162,7 +162,7 @@ void loop() {
                 //Nächsten Sendezeitpunkt festlegen
                 txFrameBuffer[i].transmitMillis = millis() + TX_RETRY_TIME + getTOA(30); //Time On Air für Antwort
                 //Wenn kein Retry mehr übrig, dann löschen
-                if (txFrameBuffer[i].retry == 0) {
+                if (txFrameBuffer[i].retry == 0) {  
                     //Aus Peer-Liste löschen
                     availablePeerList(txFrameBuffer[i].viaCall.call, false);
                     //Falls weitere Frames im TX-Puffer mit der gleichen MSG ID sind -> den ersten aktivieren

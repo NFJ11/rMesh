@@ -145,14 +145,6 @@
 			document.getElementById("settingsDHCP").addEventListener("change", function() { settingsVisibility(); });
 
 			document.getElementById("messageSend").addEventListener("click", function() { 
-				var msg = "TX: ";
-                if(document.getElementById("messageDstCall").value.length > 0) {
-                    msg += "DST: <b>" + document.getElementById("messageDstCall").value + "</b> ";
-                }
-                msg += "MSG: <b>" + document.getElementById("messageText").value + "</b> ";
-				document.getElementById("messages").innerHTML = document.getElementById("messages").innerHTML + "<br>" + msg; 
-                document.getElementById('messages').scrollTop = document.getElementById("messages").scrollHeight;
-
                 //Über Weksocket senden
 				var sendMessage = {};
 				sendMessage["text"] = document.getElementById("messageText").value;
@@ -193,6 +185,19 @@
 			document.getElementById("settingsSSIDList").addEventListener("click", function() {
 				document.getElementById("settingsSSID").value = document.getElementById("settingsSSIDList").value;
 			});
+			
+			function showMessage(m) {
+				var msg = "";
+				const date = new Date(m.time * 1000);
+				msg += date.toLocaleString("de-DE", { hour: "2-digit", minute: "2-digit" }) + ": ";		
+				if (m.tx == true) {msg += "TX: ";} else {msg += "RX: ";}
+				msg += "SRC: <b>" + m.srcCall + "</b> ";
+				if (m.dstCall)  {msg += "DST: <b>" + m.dstCall + "</b> "; }
+				msg += "MSG: <b>" + m.text + "</b>";
+				document.getElementById("messages").innerHTML = document.getElementById("messages").innerHTML + "<br>" + msg;                     
+				document.getElementById('messages').scrollTop = document.getElementById("messages").scrollHeight;			
+			};
+			
 
 			function onMessage(event) {
 				var d = JSON.parse(event.data);
@@ -236,11 +241,7 @@
 
                 //Message empfangen
                 if (d.message) {
-                    var msg = "SRC: <b>" + d.message.srcCall + "</b> ";
-                    if (d.message.dstCall)  {msg += "DST: <b>" + d.message.dstCall + "</b> "; }
-                    msg += "MSG: <b>" + d.message.text + "</b>";
-                    document.getElementById("messages").innerHTML = document.getElementById("messages").innerHTML + "<br>" + msg;                     
-					document.getElementById('messages').scrollTop = document.getElementById("messages").scrollHeight;
+					showMessage(d.message);
                 }
 
 				//Peers
@@ -324,11 +325,27 @@
 			}
 
 			function initWebSocket() {
+				//messages.json laden und parsen
+					fetch("messages.json")
+						.then(response => response.text())
+						.then(text => {
+							const lines = text.split(/\r?\n/);
+							lines.forEach(line => {
+                                if (line.trim().length === 0) return;
+                                console.log("FILE: " + line);
+								const m = JSON.parse(line);
+								showMessage(m.message);
+						});
+                        document.getElementById("messages").innerHTML = document.getElementById("messages").innerHTML + "<hr>";                     
+                        document.getElementById('messages').scrollTop = document.getElementById("messages").scrollHeight;	
+					});				
+
 				var gateway; 
 				if (window.location.hostname.length > 0) {
 					gateway = `ws://${window.location.hostname}/socket`;
 				} else {
 					gateway = "ws://192.168.33.60/socket";
+					//gateway = "ws://192.168.10.100/socket";
 				}
 				websocket = new WebSocket(gateway);
 				websocket.onopen = onOpen;

@@ -324,23 +324,13 @@ void loop() {
                     //Message über Websocket senden & speichern
                     if (found == false) {
                         //Message über Websocket senden
-                        JsonDocument doc;
-                        doc["message"]["text"] = String((char*)rxFrame.message).substring(0, rxFrame.messageLength);
-                        doc["message"]["srcCall"] = rxFrame.srcCall.call;
-                        doc["message"]["dstCall"] = rxFrame.dstCall.call;
-                        doc["message"]["nodeCall"] = rxFrame.nodeCall.call;
-                        doc["message"]["time"] = rxFrame.time;
-                        doc["message"]["id"] = rxFrame.id;
-                        doc["message"]["tx"] = false;
-                        String jsonOutput;
-                        serializeJson(doc, jsonOutput);
-                        ws.textAll(jsonOutput);
+                        String json = messageJson(String((char*)rxFrame.message).substring(0, rxFrame.messageLength), rxFrame.srcCall.call, rxFrame.dstCall.call, rxFrame.nodeCall.call, rxFrame.time, rxFrame.id, false);
+                        ws.textAll(json);
 
                         //Message in Datei speichern
                         File file = LittleFS.open("/messages.json", "a"); 
                         if (file) {
-                            serializeJson(doc, file);
-                            file.println(); 
+                            file.println(json); 
                             file.close();
                             limitFileLines("/messages.json", MAX_STORED_MESSAGES);
                         }

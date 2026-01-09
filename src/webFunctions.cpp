@@ -150,7 +150,7 @@ void startWebServer() {
   //---------------------- WEBSERVER -------------------------
 
   //Redirect für Index-Seite
-   webServer.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
+  webServer.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
     request->redirect("/index.html");
   }); 
 
@@ -214,84 +214,4 @@ void startWebServer() {
   webServer.serveStatic("/", LittleFS, "/");
   webServer.begin(); 
 }
-
-
-// String webProcessor(const String& var){
-//   if (var == "NAME") { return settings.name; }
-//   if (var == "AP_MODE") { if (settings.apMode) {return "checked";} }
-//   if (var == "DHCP") { if (settings.dhcpActive) {return "checked";} }
-//   if (var == "WIFI_PASSWORD") { return settings.wifiPassword; }
-//   if (settings.dhcpActive) {
-//     if (var == "WIFI_IP_0") { return String(WiFi.localIP()[0]); }
-//     if (var == "WIFI_IP_1") { return String(WiFi.localIP()[1]); }
-//     if (var == "WIFI_IP_2") { return String(WiFi.localIP()[2]); }
-//     if (var == "WIFI_IP_3") { return String(WiFi.localIP()[3]); }
-//     if (var == "WIFI_NETMASK_0") { return String(WiFi.subnetMask()[0]); }
-//     if (var == "WIFI_NETMASK_1") { return String(WiFi.subnetMask()[1]); }
-//     if (var == "WIFI_NETMASK_2") { return String(WiFi.subnetMask()[2]); }
-//     if (var == "WIFI_NETMASK_3") { return String(WiFi.subnetMask()[3]); }
-//     if (var == "WIFI_GATEWAY_0") { return String(WiFi.gatewayIP()[0]); }
-//     if (var == "WIFI_GATEWAY_1") { return String(WiFi.gatewayIP()[1]); }
-//     if (var == "WIFI_GATEWAY_2") { return String(WiFi.gatewayIP()[2]); }
-//     if (var == "WIFI_GATEWAY_3") { return String(WiFi.gatewayIP()[3]); }
-//     if (var == "WIFI_DNS_0") { return String(WiFi.dnsIP()[0]); }
-//     if (var == "WIFI_DNS_1") { return String(WiFi.dnsIP()[1]); }
-//     if (var == "WIFI_DNS_2") { return String(WiFi.dnsIP()[2]); }
-//     if (var == "WIFI_DNS_3") { return String(WiFi.dnsIP()[3]); }
-//   } else {
-//     if (var == "WIFI_IP_0") { return String(settings.wifiIP[0]); }
-//     if (var == "WIFI_IP_1") { return String(settings.wifiIP[1]); }
-//     if (var == "WIFI_IP_2") { return String(settings.wifiIP[2]); }
-//     if (var == "WIFI_IP_3") { return String(settings.wifiIP[3]); }
-//     if (var == "WIFI_NETMASK_0") { return String(settings.wifiNetMask[0]); }
-//     if (var == "WIFI_NETMASK_1") { return String(settings.wifiNetMask[1]); }
-//     if (var == "WIFI_NETMASK_2") { return String(settings.wifiNetMask[2]); }
-//     if (var == "WIFI_NETMASK_3") { return String(settings.wifiNetMask[3]); }
-//     if (var == "WIFI_GATEWAY_0") { return String(settings.wifiGateway[0]); }
-//     if (var == "WIFI_GATEWAY_1") { return String(settings.wifiGateway[1]); }
-//     if (var == "WIFI_GATEWAY_2") { return String(settings.wifiGateway[2]); }
-//     if (var == "WIFI_GATEWAY_3") { return String(settings.wifiGateway[3]); }
-//     if (var == "WIFI_DNS_0") { return String(settings.wifiDNS[0]); }
-//     if (var == "WIFI_DNS_1") { return String(settings.wifiDNS[1]); }
-//     if (var == "WIFI_DNS_2") { return String(settings.wifiDNS[2]); }
-//     if (var == "WIFI_DNS_3") { return String(settings.wifiDNS[3]); }
-//   }
-//   if (var == "SSID_OPTIONS") {
-//     //WiFi-Scan Result
-//     uint16_t networkCount = 0;
-//     String ssidOptions = "";
-//     bool ssidOK = false;
-//     do {
-//       if (WiFi.SSID(networkCount).length() > 0) {
-//         ssidOptions += "<option value='" + WiFi.SSID(networkCount) + "'";
-//         if (WiFi.SSID(networkCount) == settings.wifiSSID) {
-//           ssidOptions += " selected"; 
-//           ssidOK = true; 
-//         }
-//         ssidOptions += ">" + WiFi.SSID(networkCount) + "</option> \r\n";      
-//       }
-//       networkCount++;
-//     }
-//     while (WiFi.SSID(networkCount).length() > 0 && networkCount < 32);
-//     if (!ssidOK) {
-//       ssidOptions += "<option value='" + String(settings.wifiSSID) + "' selected>" + String(settings.wifiSSID) + "</option> \r\n";
-//     }
-//     return ssidOptions;
-//   }
-//   if (var == "URL") {
-//       //Neue URL definieren
-//       if (settings.apMode == true) {
-//         return "http://192.168.1.1";
-//       } else {
-//         if (settings.dhcpActive == true) {
-//           return "http://" + String(WiFi.localIP()[0]) + "." + String(WiFi.localIP()[1]) + "." + String(WiFi.localIP()[2]) + "." + String(WiFi.localIP()[3]);
-//         } else {
-//           return "http://" + String(settings.wifiIP[0]) + "." + String(settings.wifiIP[1]) + "." + String(settings.wifiIP[2]) + "." + String(settings.wifiIP[3]);
-//         }
-//       }
-//   }
-//   return String();
-// }
-
-
 

@@ -76,7 +76,6 @@ void sendMessage(String dstCall, String text);
 void availablePeerList(String call, bool available);
 void monitorFrame(Frame &f);
 uint32_t getLoRaToA(uint8_t payloadSize, uint8_t SF, uint32_t BW, uint8_t CR, uint16_t nPreamble);
-
-
+String messageJson(String text, String srcCall, String dstCall, String nodeCall, time_t time, uint32_t id, bool tx);
 
 #endif

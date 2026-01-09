@@ -4,6 +4,7 @@
 #include "settings.h"
 #include <LittleFS.h>
 
+
 SX1278 radio = new Module(LORA_NSS, LORA_DIO0, LORA_RST, LORA_DIO1);
 #if defined(ESP8266) || defined(ESP32)
   ICACHE_RAM_ATTR
@@ -66,6 +67,8 @@ void initRadio() {
     peerList.push_back(p);
 
 }
+
+
 
 void monitorFrame(Frame &f) {
     //Frame über Websocket senden
@@ -214,24 +217,32 @@ void sendMessage(String dstCall, String text) {
         txFrameBuffer.push_back(f);
     }
 
+    //Über Websocket (zurück) senden
+    String json = messageJson(text, f.srcCall.call, f.dstCall.call, f.nodeCall.call, f.time, f.id, true);
+    ws.textAll(json);    
+
     //Message in Datei speichern
-    JsonDocument doc;
-    doc["message"]["text"] = text;
-    doc["message"]["srcCall"] = String(settings.mycall);
-    doc["message"]["dstCall"] = dstCall;
-    doc["message"]["time"] = f.time;
-    doc["message"]["id"] = f.id;
-    doc["message"]["tx"] = true;
-    String jsonOutput;
-    serializeJson(doc, jsonOutput);
     File file = LittleFS.open("/messages.json", "a"); 
     if (file) {
-        serializeJson(doc, file);
-        file.println(); 
+        file.println(json); 
         file.close();
         limitFileLines("/messages.json", MAX_STORED_MESSAGES);
     }    
 
+}
+
+String messageJson(String text, String srcCall, String dstCall, String nodeCall, time_t time, uint32_t id, bool tx) {
+    JsonDocument doc;
+    doc["message"]["text"] = text;
+    doc["message"]["srcCall"] = srcCall;
+    doc["message"]["dstCall"] = dstCall;
+    doc["message"]["nodeCall"] = nodeCall;
+    doc["message"]["time"] = time;
+    doc["message"]["id"] = id;
+    doc["message"]["tx"] = tx;
+    String jsonOutput;
+    serializeJson(doc, jsonOutput);
+    return jsonOutput;
 }
 
 

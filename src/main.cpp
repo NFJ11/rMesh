@@ -21,10 +21,50 @@ uint32_t announceTimer = 5000; //Erstes Announce nach 5 Sekunden
 const char* TZ_INFO = "CET-1CEST,M3.5.0,M10.5.0/3";
 
 //Timing
-uint32_t webSocketTimer = millis();
+uint32_t statusTimer = millis();
 uint32_t rebootTimer = 0xFFFFFFFF;
+uint32_t txPauseTimer = 0;
 
 
+
+void printHexArray(uint8_t* data, size_t length) {
+  for (size_t i = 0; i < length; i++) {
+    if (data[i] < 0x10) {
+      Serial.print("0"); // Führende Null für Werte kleiner als 16
+    }
+    Serial.print(data[i], HEX); 
+    Serial.print(" "); // Leerzeichen zur besseren Lesbarkeit
+  }
+  Serial.println(); // Zeilenumbruch am Ende
+}
+
+void limitFileLines(const char* path, int maxLines) {
+    File file = LittleFS.open(path, "r");
+    if (!file) return;
+   int count = 0;
+    while (file.available()) {
+        if (file.read() == '\n') count++;
+    }
+    if (count <= maxLines) {
+        file.close();
+        return;
+    }
+    int skipLines = count - (maxLines - 50); // Wir behalten 950, um Puffer zu haben
+    file.seek(0);
+    File tempFile = LittleFS.open("/temp.json", "w");
+    int currentLine = 0;
+    while (file.available()) {
+        String line = file.readStringUntil('\n');
+        if (currentLine >= skipLines) {
+            tempFile.println(line);
+        }
+        currentLine++;
+    }
+    file.close();
+    tempFile.close();
+    LittleFS.remove(path);
+    LittleFS.rename("/temp.json", path);
+}
 
 
 
@@ -44,8 +84,7 @@ void setup() {
   Serial.begin(115200);
   Serial.setDebugOutput(true);  
   while (!Serial) {}
-  Serial.println("--------------------------------------------------------------------------------");
-
+  
   //Einstellungen laden
   loadSettings();
   defaultSettings();
@@ -94,14 +133,15 @@ void loop() {
 	}
   
 	//Prüfen, ob was gesendet werden muss
-	if (transmittingFlag == false) {
+	if ((transmittingFlag == false) && (millis() > txPauseTimer)) {
 		//Sendepuffer duchlaufen
-		for (int i = 0; i < txFrameBuffer.size(); i++) {
+		//for (int i = 0; i < txFrameBuffer.size(); i++) {
+        if (txFrameBuffer.size() > 0) {
+            int i = 0;
 			//Prüfen, ob Frame gesendet werden muss
-			if (millis() > txFrameBuffer[i].transmitMillis) {
+			if ((millis() > txFrameBuffer[i].transmitMillis) && (txFrameBuffer[i].suspendTX == false)) {
 				//Frame senden
-				uint32_t a;
-				if (transmitFrame(txFrameBuffer[i])) {
+                if (transmitFrame(txFrameBuffer[i])) {
 					//Erfolg
 					//Retrys runterzählen
 					txFrameBuffer[i].retry --;
@@ -109,24 +149,25 @@ void loop() {
 					txFrameBuffer[i].transmitMillis = millis() + TX_RETRY_TIME;
 					//Wenn kein Retry mehr übrig, dann löschen
 					if (txFrameBuffer[i].retry == 0) {
-						//Call, mit VIA_REPEAT in Peers auf nicht available setzen
-						if (txFrameBuffer[i].initRetry > 1) {
-							for (int ii = 0; ii < txFrameBuffer[i].viaCall.size(); ii++) {
-								if (txFrameBuffer[i].viaCall[ii].header == VIA_REPEAT) {
-									availablePeerList(txFrameBuffer[i].viaCall[ii].call, false);
-								}
-							}
-						}
-						txFrameBuffer.erase(txFrameBuffer.begin() + i);
+                        //Aus Peer-Liste löschen
+                        availablePeerList(txFrameBuffer[i].viaCall.call, false);
+                        //Falls weitere Frames im TX-Puffer mit der gleichen MSG ID sind -> den ersten aktivieren
+                        for (int ii = 0; ii < txFrameBuffer.size(); ii++) {
+                            if ((txFrameBuffer[ii].id == txFrameBuffer[i].id) && (txFrameBuffer[ii].suspendTX == true)){
+                                txFrameBuffer[ii].suspendTX = false;
+                                txFrameBuffer[ii].transmitMillis = millis() + TX_RETRY_TIME + getLoRaToA(20, settings.loraSpreadingFactor, settings.loraBandwidth, settings.loraCodingRate, settings.loraPreambleLength);  //Zeit für ACK Frame
+                            }
+                        }
+                        //Frame löschen
+                        txFrameBuffer.erase(txFrameBuffer.begin() + i);
 					}
 				} else {
 					//Fehler beim Senden -> Später nochmal
-					txFrameBuffer[i].transmitMillis = millis() + TX_BUSY_RETRY_TIME;
+					txFrameBuffer[i].transmitMillis = millis() + TX_PAUSE_TIME;
 				}
 			}    
 		}
 	}
-
 
 	//Prüfen ob Änderungen vom HF-Chip vorliegen
 	if (radioFlag) {
@@ -137,112 +178,77 @@ void loop() {
 		//Daten Empfangen
 		if (irqFlags == 0x50) {
 			//Prüfen, ob was empfangen wurde
-			byte rxBytes[256];
-			size_t rxSize = radio.getPacketLength();
-			int16_t state = radio.readData(rxBytes, rxSize);
+			Frame rxFrame;
+            rxFrame.rawDataLength = radio.getPacketLength();
+			int16_t state = radio.readData(rxFrame.rawData, rxFrame.rawDataLength);
 			if (state == RADIOLIB_ERR_NONE) {
+                //Serial.printf("RX Length: %d\n", rxFrame.rawDataLength);
+                //printHexArray(rxFrame.rawData, rxFrame.rawDataLength);
 				//Empfangene Daten in Frame parsen
-				Frame rxFrame;
-				rxFrame.viaCall.reserve(6);
-				memcpy(rxFrame.rawData, rxBytes, 255);
-				rxFrame.rawDataLength = rxSize;
 				rxFrame.time = time(NULL);
 				rxFrame.rssi = radio.getRSSI();
 				rxFrame.snr = radio.getSNR();
 				rxFrame.frqError =  radio.getFrequencyError();
 				rxFrame.tx = false;
 				//Frametype
-				rxFrame.frameType = rxBytes[0];
+				rxFrame.frameType = rxFrame.rawData[0];
 				//Frame druchlaufen und nach Headern suchen
 				uint8_t header = 0;
 				uint8_t length = 0;
-				String viaCall;
-				CallsignWithHeader cWH;
-				for (uint8_t i=1; i < rxSize; i++) {
+				for (uint8_t i=1; i < rxFrame.rawDataLength; i++) {
 					//Header prüfen
-					header = rxBytes[i] >> 4;
+					header = rxFrame.rawData[i] >> 4;
 					switch (header) {
-						case SRC_CALL:	
-							length = (rxBytes[i] & 0x0F);
+                        case SRC_CALL:	
+                        case DST_CALL:	
+                        case VIA_CALL:	
+                        case NODE_CALL:	
+							length = (rxFrame.rawData[i] & 0x0F);
+                            //Serial.printf("Call detected\n");
 							//max. Länge prüfen
 							if (length > MAX_CALLSIGN_LENGTH) {length = MAX_CALLSIGN_LENGTH;}
 							//nicht außerhalb vom rxBuffer lesen
-							if ((i + length) < rxSize) {
+							if ((i + length) < rxFrame.rawDataLength) {
 								//Schleife von aktueller Position + 1 bis "length"
 								for(int ii = i + 1; ii <= i + length; ii++) {
 									//Einzelne Bytes in String kopieren
-									rxFrame.srcCall.call += (char)rxBytes[ii]; 
+                                    switch (header) {
+                                        case SRC_CALL : rxFrame.srcCall.call += (char)rxFrame.rawData[ii]; break;
+                                        case DST_CALL : rxFrame.dstCall.call += (char)rxFrame.rawData[ii]; break;
+                                        case VIA_CALL : rxFrame.viaCall.call += (char)rxFrame.rawData[ii]; break;
+                                        case NODE_CALL : rxFrame.nodeCall.call += (char)rxFrame.rawData[ii]; break;
+                                    }
 								}
 							}
 							//Zum nächsten Header springen (wenn Frame lange genug)
-							if ((i + length) <= rxSize) {i += length;}
-							break;
-						case DST_CALL:
-							length = (rxBytes[i] & 0x0F);
-							//max. Länge prüfen
-							if (length > MAX_CALLSIGN_LENGTH) {length = MAX_CALLSIGN_LENGTH;}
-							//nicht außerhalb vom rxBuffer lesen
-							if ((i + length) < rxSize) {
-								//Schleife von aktueller Position + 1 bis "length"
-								for(int ii = i + 1; ii <= i + length; ii++) {
-									//Einzelne Bytes in String kopieren
-									rxFrame.dstCall.call += (char)rxBytes[ii]; 
-								}
-							}
-							//Zum nächsten Header springen (wenn Frame lange genug)
-							if ((i + length) <= rxSize) {i += length;}
-							break;
-						case VIA_REPEAT:
-						case VIA_NO_REPEAT:
-							length = (rxBytes[i] & 0x0F);
-							//max. Länge prüfen
-							if (length > MAX_CALLSIGN_LENGTH) {length = MAX_CALLSIGN_LENGTH;}
-							//nicht außerhalb vom rxBuffer lesen
-							if ((i + length) < rxSize) {
-								//Schleife von aktueller Position + 1 bis "length"
-								viaCall = "";
-								for(int ii = i + 1; ii <= i + length; ii++) {
-									//Einzelne Bytes in String kopieren
-									viaCall += (char)rxBytes[ii]; 
-								}
-								cWH.call = viaCall;
-								cWH.header = header;
-								rxFrame.viaCall.push_back(cWH);
-							}
-							//Zum nächsten Header springen (wenn Frame lange genug)
-							if ((i + length) <= rxSize) {i += length;}
+							if ((i + length) <= rxFrame.rawDataLength) {i += length;}
 							break;
 						case MESSAGE:
 							//Nur beim passenden Frame-Type
-							if ((rxFrame.frameType == FrameType::TEXT_MESSAGE) || (rxFrame.frameType == FrameType::MESSAGE_REPLY))  {
+							if ((rxFrame.frameType == FrameType::TEXT_MESSAGE) || (rxFrame.frameType == FrameType::MESSAGE_ACK))  {
 								//ID ausschneiden
-								if (rxSize >= (i + sizeof(rxFrame.id))) {
-									rxFrame.id = (rxBytes[i + 4] << 24) + (rxBytes[i + 3] << 16) + (rxBytes[i + 2] << 8) + rxBytes[i + 1];  
+								if (rxFrame.rawDataLength >= (i + sizeof(rxFrame.id))) {
+									rxFrame.id = (rxFrame.rawData[i + 4] << 24) + (rxFrame.rawData[i + 3] << 16) + (rxFrame.rawData[i + 2] << 8) + rxFrame.rawData[i + 1];  
 									i += sizeof(rxFrame.id) + 1;
 								}
 								//Message Länge
-								rxFrame.messageLength = rxSize - i;
+								rxFrame.messageLength = rxFrame.rawDataLength - i;
 								//Message
-								memcpy(rxFrame.message, rxBytes + i, rxFrame.messageLength);
+								memcpy(rxFrame.message, rxFrame.rawData + i, rxFrame.messageLength);
 								//Suche beenden
-								i = rxSize;
+								i = rxFrame.rawDataLength;
 							}
 					}
 				}
 
 				//In Peer-Liste einfügen
 				Peer p;
-				p.call = rxFrame.srcCall.call;
+				p.call = rxFrame.nodeCall.call;
 				p.lastRX = time(NULL);
 				p.frqError = radio.getFrequencyError();
 				p.rssi = radio.getRSSI();
 				p.snr = radio.getSNR();
 				addPeerList(p);
-
-				//Falls ANNOUNCE_REPLY empfangen wurde, dann Available = true
-				if ((rxFrame.dstCall.call == String(settings.mycall)) && (rxFrame.frameType == ANNOUNCE_REPLY))  {
-					availablePeerList(rxFrame.srcCall.call, true);
-				}
 
 				//Frame an Monitor senden
 				monitorFrame(rxFrame);
@@ -253,83 +259,92 @@ void loop() {
 				switch (rxFrame.frameType) {
 				case FrameType::ANNOUNCE:  //Announce 
 					//Antowrt zusammenbauen
-					txFrame.frameType = FrameType::ANNOUNCE_REPLY;
-					txFrame.transmitMillis = millis() + ANNOUNCE_REPLAY_TIME;
-					txFrame.dstCall.call = rxFrame.srcCall.call;
-					txFrame.retry = 1;
-					txFrameBuffer.push_back(txFrame);
+                    if (rxFrame.nodeCall.call.length() > 0) {
+                        txFrame.frameType = FrameType::ANNOUNCE_REPLY;
+                        txFrame.transmitMillis = millis() + ACK_TIME;
+                        txFrame.dstCall.call = rxFrame.nodeCall.call;
+                        txFrame.retry = 1;
+                        txFrameBuffer.push_back(txFrame);
+                    }
 					break;          
 				case FrameType::ANNOUNCE_REPLY:  //Announce REPLAY
-					//Wird oben bei der Peer-Liste abgehandelt
+                    if (rxFrame.dstCall.call == String(settings.mycall)) {
+                        availablePeerList(rxFrame.nodeCall.call, true);
+                    }
 					break;
-				case MESSAGE_REPLY: //Senden abbrechen
-					//viaR HEADER nach via HEADER setzen
-					txAbort = true;
+				case MESSAGE_ACK: //Senden abbrechen
+					//Im TX-Puffer nach MSG-ID und NODE-Call suchen und löschen
+                    // Serial.printf("MESSAGE_ACK\n");
 					for (int i = 0; i < txFrameBuffer.size(); i++) {
-						if (txFrameBuffer[i].id == rxFrame.id) {
-							for (int ii = 0; ii < txFrameBuffer[i].viaCall.size(); ii++) {
-								if ((txFrameBuffer[i].viaCall[ii].header == VIA_REPEAT) && (txFrameBuffer[i].viaCall[ii].call) == rxFrame.srcCall.call) {
-									txFrameBuffer[i].viaCall[ii].header = VIA_NO_REPEAT;
-								}
-								//Prüfen, ob noch Repeat-Header da sind
-								if (txFrameBuffer[i].viaCall[ii].header == VIA_REPEAT) {txAbort = false;}
-							}	
-							if (txAbort == true) {  txFrameBuffer.erase(txFrameBuffer.begin() + i); };					
+						if ((txFrameBuffer[i].id == rxFrame.id) && (txFrameBuffer[i].viaCall.call == rxFrame.nodeCall.call)) {
+                            //In Peer Liste eintragen
+                            availablePeerList(rxFrame.nodeCall.call, true);
+                            //TX Puffer löschen
+                            txFrameBuffer.erase(txFrameBuffer.begin() + i); 
+                            //Falls weitere Frames im TX-Puffer mit der gleichen MSG ID sind -> den ersten aktivieren
+                            for (int ii = 0; ii < txFrameBuffer.size(); ii++) {
+                                if ((txFrameBuffer[ii].id == rxFrame.id) && (txFrameBuffer[ii].suspendTX == true)){
+                                    txFrameBuffer[ii].suspendTX = false;
+                                    txFrameBuffer[ii].transmitMillis = millis() + TX_RETRY_TIME;
+                                }
+                            }
 						}
 					}
 					break;
 				case FrameType::TEXT_MESSAGE:  	//TEXT Message
-					//Antwort senden
-					//Prüfen, ob eigenes Call in VIA-Liste
-					for (int i = 0; i < rxFrame.viaCall.size(); i++) {
-						//Serial.printf("Call %s\n", f.viaCall[i].call );
-        				if (rxFrame.viaCall[i].call == String(settings.mycall)) {
-							//Antwort senden
-							Frame r;
-							r.frameType = MESSAGE_REPLY;
-							r.dstCall = rxFrame.srcCall;
-							r.retry = 1;
-							r.tx = 1;
-							r.id = rxFrame.id;
-							r.messageLength = 1;
-							r.message[0] = 0x00;
-							r.transmitMillis = millis() + 1000; // ************************************** ANPASSEN AN POSITION IN VIA LISTE
-							txFrameBuffer.push_back(r);
-						}
-					}  
+                    //ACK-Senden
+                    Frame r;
+                    r.frameType = MESSAGE_ACK;
+                    r.dstCall = rxFrame.srcCall;
+                    r.retry = 1;
+                    r.tx = 1;
+                    r.id = rxFrame.id;
+                    r.transmitMillis = millis() + ACK_TIME;
+                    txFrameBuffer.push_back(r);
 
+                    //Message ID und SCR-Call in Datei suchen
+                    File fileRead = LittleFS.open("/messages.json", "r");
+                    bool found = false;
+                    if (fileRead) {
+                        JsonDocument doc;
+                        while (fileRead.available()) {
+                            DeserializationError error = deserializeJson(doc, fileRead);
+                            if (error == DeserializationError::Ok) {
+                                if ((doc["message"]["id"].as<uint32_t>() == rxFrame.id) && (doc["message"]["srcCall"].as<String>() == rxFrame.srcCall.call) && (doc["message"]["tx"] .as<bool>() == false)) {
+                                    found = true;
+                                    break; 
+                                }
+                            } else if (error != DeserializationError::EmptyInput) {
+                                fileRead.readStringUntil('\n');
+                            }
+                        }
+                        fileRead.close();                    
+                    }
 
+                    //Message über Websocket senden & speichern
+                    if (found == false) {
+                        //Message über Websocket senden
+                        JsonDocument doc;
+                        doc["message"]["text"] = String((char*)rxFrame.message).substring(0, rxFrame.messageLength);
+                        doc["message"]["srcCall"] = rxFrame.srcCall.call;
+                        doc["message"]["dstCall"] = rxFrame.dstCall.call;
+                        doc["message"]["nodeCall"] = rxFrame.nodeCall.call;
+                        doc["message"]["time"] = rxFrame.time;
+                        doc["message"]["id"] = rxFrame.id;
+                        doc["message"]["tx"] = false;
+                        String jsonOutput;
+                        serializeJson(doc, jsonOutput);
+                        ws.textAll(jsonOutput);
 
-
-					//Message über Websocket senden  ***************************************************  NUR WENN MSGID NOCH NICHT IM CACHE
-					JsonDocument doc;
-					doc["message"]["message"] = String((char*)rxFrame.message).substring(0, rxFrame.messageLength);
-					doc["message"]["srcCall"] = rxFrame.srcCall.call;
-					doc["message"]["dstCall"] = rxFrame.dstCall.call;
-					doc["message"]["time"] = rxFrame.time;
-					String jsonOutput;
-					serializeJson(doc, jsonOutput);
-					ws.textAll(jsonOutput);
-
-
-
-										//ID + CALL IN MESSAGE speicher (wegen doppelt)
-
-
-
-										File file = LittleFS.open("/messages.json", "a"); 
-					if (!file) {
-						Serial.println("Fehler beim Öffnen");
-						return;
-					}
-
-    // JSON in die Datei schreiben
-    serializeJson(doc, file);
-    // WICHTIG: Zeilenumbruch für den nächsten Datensatz
-    file.println(); 
-    
-    file.close();
-
+                        //Message in Datei speichern
+                        File file = LittleFS.open("/messages.json", "a"); 
+                        if (file) {
+                            serializeJson(doc, file);
+                            file.println(); 
+                            file.close();
+                            limitFileLines("/messages.json", MAX_STORED_MESSAGES);
+                        }
+                    }
 					break;
 				}
 			}  
@@ -340,18 +355,22 @@ void loop() {
 		//Senden fertig
 		if (irqFlags == 0x08) {
 			transmittingFlag = false;
+            statusTimer = 0;
+            txPauseTimer = millis() + TX_PAUSE_TIME;
 			radio.startReceive();
 		}
 	}
 
 
   //Status über Websocket senden
-  if (millis() > webSocketTimer) {
-	webSocketTimer = millis() + 1000;
+  if (millis() > statusTimer) {
+	statusTimer = millis() + 1000;
 
 	//Zeit über Websocket senden
 	JsonDocument doc;
-	doc["time"] = time(NULL);
+	doc["status"]["time"] = time(NULL);
+	doc["status"]["tx"] = transmittingFlag;
+	doc["status"]["txBufferCount"] = txFrameBuffer.size();
 	String jsonOutput;
 	serializeJson(doc, jsonOutput);
 	ws.textAll(jsonOutput);

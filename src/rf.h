@@ -13,8 +13,8 @@ struct Peer {
 };
 
 struct CallsignWithHeader {
-    String call;
-    uint8_t header;
+    String call = "";
+    uint8_t header = 0;
 };
 
 struct Frame {
@@ -22,7 +22,9 @@ struct Frame {
     uint8_t frameType = 0x00;
     CallsignWithHeader srcCall;
     CallsignWithHeader dstCall;
-    std::vector<CallsignWithHeader> viaCall;
+    CallsignWithHeader nodeCall;
+    CallsignWithHeader viaCall;
+    //std::vector<CallsignWithHeader> viaCall;
     uint8_t retry = 1;
     uint8_t initRetry = 1;
     uint8_t message[256];
@@ -35,6 +37,7 @@ struct Frame {
     float snr = 0;
     float frqError = 0;
     bool tx = false;
+    bool suspendTX = false;
 };
 
 
@@ -44,17 +47,17 @@ enum FrameType {
     ANNOUNCE_REPLY,
     TUNE,
     TEXT_MESSAGE,
-    MESSAGE_REPLY
+    MESSAGE_ACK,
+    TEXT_MESSAGE_ROUTING
 };
 
 enum HeaderType {
     //Obere 4 Bits vom Header-Byte -> 0x00 bis 0x0F
-    SRC_CALL = 0x0,  
-    DST_CALL = 0x1,
-    MESSAGE = 0x2,
-    VIA_REPEAT = 0x3,
-    VIA_NO_REPEAT = 0x4,
-    NODE_CALL = 0x5
+    SRC_CALL,  
+    DST_CALL,
+    MESSAGE,
+    NODE_CALL,
+    VIA_CALL
 };
 
 extern bool transmittingFlag;
@@ -72,6 +75,7 @@ bool transmitFrame(Frame &f);
 void sendMessage(String dstCall, String text);
 void availablePeerList(String call, bool available);
 void monitorFrame(Frame &f);
+uint32_t getLoRaToA(uint8_t payloadSize, uint8_t SF, uint32_t BW, uint8_t CR, uint16_t nPreamble);
 
 
 

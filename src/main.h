@@ -11,16 +11,20 @@
 
 //Timing
 #define ANNOUNCE_TIME 5 * 60 * 1000 + random(0, 1 * 60 * 1000)  //ANNOUNCE Baken
-#define ANNOUNCE_REPLAY_TIME 500 + random(0, 500)                    //Pause für Antwort auf Announce
 #define PEER_TIMEOUT 15 * 60 * 1000             //Zeit, nach dem ein Call aus der Peer-Liste gelöscht wird
-#define TX_BUSY_RETRY_TIME 500                  //Zeit, nach der nochmal gesendet wird, wenn QRG besetzt
+#define ACK_TIME 500 + random(0, 1000)           //Zeit, bis ein ACK gesendet wird
+#define TX_PAUSE_TIME 1000                       //Minimale Pause zwischen 2 Aussendungen
 #define TX_RETRY 5                              //Retrys beim Senden 
-#define TX_RETRY_TIME 2000 + random(0, 2000)    //Pause zwischen wiederholungen
+#define TX_RETRY_TIME 3000 + random(0, 2000)    //Pause zwischen wiederholungen (muss größer als ACK_TIME sein + Message Länge)
+#define MAX_STORED_MESSAGES 1000                //max. in "messages.json" gespeicherte Nachrichten
+
 
 //Interner Quatsch
 #define NAME "rMesh"                        //Versions-String
 #define VERSION "V0.1"                        //Versions-String
-#define MAX_CALLSIGN_LENGTH 15                  //maximale Länge des Rufzeichens
+#define MAX_CALLSIGN_LENGTH 8                  //maximale Länge des Rufzeichens
 
+extern uint32_t statusTimer;
+void limitFileLines(const char* path, int maxLines);
 
 #endif

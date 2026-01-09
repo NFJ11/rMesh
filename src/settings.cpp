@@ -12,7 +12,7 @@ Settings settings;
 void defaultSettings() {
     //Standart Einstellungen
     Serial.println("Lade Default-Settings");
-    String("BBB").toCharArray(settings.mycall, 8);
+    String("DH1NFJ").toCharArray(settings.mycall, 8);
     String("NFJ-Lan BB").toCharArray(settings.wifiSSID, 64);
     String("438.725db0kch").toCharArray(settings.wifiPassword, 64);
     String("de.pool.ntp.org").toCharArray(settings.ntpServer, 64);

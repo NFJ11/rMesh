@@ -61,6 +61,7 @@ enum HeaderType {
 };
 
 extern bool transmittingFlag;
+extern bool receivingFlag;
 extern bool radioFlag;
 extern SX1278 radio;
 extern std::vector<Peer> peerList;

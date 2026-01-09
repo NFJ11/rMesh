@@ -22,6 +22,8 @@ struct Settings {
   uint8_t loraCodingRate;
   uint8_t loraSpreadingFactor;
   int16_t loraPreambleLength;
+  bool loraRepeat;
+  uint8_t loraMaxMessageLength;
 };
 
 extern Settings settings;

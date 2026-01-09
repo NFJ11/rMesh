@@ -16,7 +16,7 @@
 #define TX_PAUSE_TIME 1000                       //Minimale Pause zwischen 2 Aussendungen
 #define TX_RETRY 5                              //Retrys beim Senden 
 #define TX_RETRY_TIME 3000 + random(0, 2000)    //Pause zwischen wiederholungen (muss größer als ACK_TIME sein + Message Länge)
-#define MAX_STORED_MESSAGES 1000                //max. in "messages.json" gespeicherte Nachrichten
+#define MAX_STORED_MESSAGES 500                //max. in "messages.json" gespeicherte Nachrichten
 
 
 //Interner Quatsch

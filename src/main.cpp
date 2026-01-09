@@ -88,10 +88,7 @@ void setup() {
   //Einstellungen laden
   loadSettings();
   defaultSettings();
-  if (checkSettings() == false) {
-	defaultSettings();
-	saveSettings();
-  }
+  if (checkSettings() == false) { defaultSettings(); }
   showSettings();
 
   //WiFi Starten
@@ -114,7 +111,7 @@ void setup() {
 
   //Radio Init
   initRadio();
-
+ 
 }
 
 void loop() {
@@ -146,7 +143,7 @@ void loop() {
 					//Retrys runterzählen
 					txFrameBuffer[i].retry --;
 					//Nächsten Sendezeitpunkt festlegen
-					txFrameBuffer[i].transmitMillis = millis() + TX_RETRY_TIME;
+					txFrameBuffer[i].transmitMillis = millis() + TX_RETRY_TIME + getTOA(30); //Time On Air für Antwort
 					//Wenn kein Retry mehr übrig, dann löschen
 					if (txFrameBuffer[i].retry == 0) {
                         //Aus Peer-Liste löschen
@@ -155,16 +152,13 @@ void loop() {
                         for (int ii = 0; ii < txFrameBuffer.size(); ii++) {
                             if ((txFrameBuffer[ii].id == txFrameBuffer[i].id) && (txFrameBuffer[ii].suspendTX == true)){
                                 txFrameBuffer[ii].suspendTX = false;
-                                txFrameBuffer[ii].transmitMillis = millis() + TX_RETRY_TIME + getLoRaToA(20, settings.loraSpreadingFactor, settings.loraBandwidth, settings.loraCodingRate, settings.loraPreambleLength);  //Zeit für ACK Frame
+                                txFrameBuffer[ii].transmitMillis = millis() + TX_RETRY_TIME + getTOA(30); //Time On Air für Antwort
                             }
                         }
                         //Frame löschen
                         txFrameBuffer.erase(txFrameBuffer.begin() + i);
 					}
-				} else {
-					//Fehler beim Senden -> Später nochmal
-					txFrameBuffer[i].transmitMillis = millis() + TX_PAUSE_TIME;
-				}
+				} 
 			}    
 		}
 	}

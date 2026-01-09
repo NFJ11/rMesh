@@ -9,8 +9,8 @@ SX1278 radio = new Module(LORA_NSS, LORA_DIO0, LORA_RST, LORA_DIO1);
 #if defined(ESP8266) || defined(ESP32)
   ICACHE_RAM_ATTR
 #endif
-bool radioFlag;
-bool transmittingFlag;
+bool radioFlag = false;
+bool transmittingFlag = false;
 
 std::vector<Peer> peerList;
 std::vector<Frame> txFrameBuffer;
@@ -143,6 +143,7 @@ bool transmitFrame(Frame &f) {
         memcpy(&f.rawData[f.rawDataLength], &f.id, sizeof(f.id)); //Payload
         f.rawDataLength += sizeof(f.id);
         //Message
+        if (f.messageLength > settings.loraMaxMessageLength) {f.messageLength = settings.loraMaxMessageLength;}
         memcpy(&f.rawData[f.rawDataLength], &f.message[0], f.messageLength); //Payload
         f.rawDataLength += f.messageLength;
     }
@@ -316,28 +317,28 @@ void addSourceCall(uint8_t* data, uint8_t &len) {
     len += strlen(settings.mycall);
 }
 
-
-uint32_t getLoRaToA(uint8_t payloadSize, uint8_t SF, uint32_t BW, uint8_t CR, uint16_t nPreamble) {
+uint32_t getTOA(uint8_t payloadBytes) {
+   // Falls settings.loraBandwidth = 250 ist, rechnen wir mal 1000 für Hz
+    float bwHz = (float)settings.loraBandwidth * 1000.0f; 
     
-    // Symbol-Dauer in Sekunden: T_sym = 2^SF / BW
-    double tSym = pow(2, SF) / (double)BW;
+    if (bwHz <= 0) return 0;
+    
+    // 1. Symboldauer (Ts) in ms
+    // (2^11 / 250000) * 1000 = 8.192 ms
+    float symbolDuration = (powf(2, (float)settings.loraSpreadingFactor) / bwHz) * 1000.0f;
 
-    // Zeit für Präambel: (Anzahl + 4.25) * T_sym
-    double tPreamble = (nPreamble + 4.25) * tSym;
+    // 2. Präambel-Dauer (Standard: 8 Symbole + 4.25)
+    float preambleDuration = ((float)settings.loraPreambleLength + 4.25f) * symbolDuration;
 
-    // Low Data Rate Optimization (muss bei SF11 & SF12 auf 125kHz BW an sein)
-    bool lowDataRateOptimize = false;
-    if (tSym > 0.016) { // Wenn Symbolzeit > 16ms
-        lowDataRateOptimize = true;
-    }
-
-    // Payload Symbol Anzahl Berechnung
-    double payloadSymbNb = 8 + max(ceil((8.0 * payloadSize - 4.0 * SF + 28 + 16) / 
-                           (4.0 * (SF - 2.0 * lowDataRateOptimize))) * CR, 0.0);
-
-    double tPayload = payloadSymbNb * tSym;
-    double totalTimeSec = tPreamble + tPayload;
-
-    // Rückgabe in Millisekunden (aufgerundet)
-    return (uint32_t)(totalTimeSec * 1000.0 + 0.5);
+    // 3. Payload-Symbole (CR 6 = 4/6)
+    // loraCodingRate sollte hier den Wert 6 haben
+    float payloadBits = 8.0f * (float)payloadBytes - 4.0f * (float)settings.loraSpreadingFactor + 28.0f + 16.0f;
+    float denominator = 4.0f * (float)settings.loraSpreadingFactor;
+    
+    float payloadSymbolsCount = 8.0f + fmaxf(ceilf(payloadBits / denominator) * (float)settings.loraCodingRate, 0.0f);
+    
+    // 4. Gesamtdauer
+    float totalAirtime = preambleDuration + (payloadSymbolsCount * symbolDuration);
+    
+    return (uint32_t)roundf(totalAirtime);
 }

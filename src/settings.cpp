@@ -29,7 +29,9 @@ void defaultSettings() {
     settings.loraCodingRate = 6;
     settings.loraSpreadingFactor = 11;
     settings.loraPreambleLength = 8;
+    settings.loraRepeat = true;
     saveSettings();
+    loadSettings();
 }
 
 void saveSettings() {
@@ -46,10 +48,13 @@ void saveSettings() {
 
 
 void loadSettings() {
-  //Einstellungen im EEPROM speichern
-  Serial.println("Lade Einstellungen");
-  EEPROM.begin(4095);
-  EEPROM.get(0, settings); 
+    //Einstellungen aus EEPROM lesen
+    Serial.println("Lade Einstellungen");
+    EEPROM.begin(4095);
+    EEPROM.get(0, settings); 
+
+    //MAX Nachrichtenlänge berechnen
+    settings.loraMaxMessageLength = 255 - (4 * (MAX_CALLSIGN_LENGTH + 1)) - 8;
 }
 
 bool checkSettings() {
@@ -84,6 +89,8 @@ void showSettings() {
     Serial.printf("loraCodingRate: %d\n", settings.loraCodingRate);
     Serial.printf("loraSpreadingFactor: %d\n", settings.loraSpreadingFactor);
     Serial.printf("loraPreambleLength: %d\n", settings.loraPreambleLength);
+    Serial.printf("loraRepeat: %d\n", settings.loraRepeat);
+    Serial.printf("loraMaxMessageLength: %d\n", settings.loraMaxMessageLength);
     Serial.println();
 }
 
@@ -121,10 +128,11 @@ void sendSettings() {
     doc["settings"]["loraPreambleLength"] = settings.loraPreambleLength;
     doc["settings"]["version"] = VERSION;
     doc["settings"]["name"] = NAME;
+    doc["settings"]["loraRepeat"] = settings.loraRepeat;
+    doc["settings"]["loraMaxMessageLength"] = settings.loraMaxMessageLength;
 
-
-  String jsonOutput;
-  serializeJson(doc, jsonOutput);
-  ws.textAll(jsonOutput);
+    String jsonOutput;
+    serializeJson(doc, jsonOutput);
+    ws.textAll(jsonOutput);
 
 }
